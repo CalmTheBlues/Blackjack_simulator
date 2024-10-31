@@ -1,18 +1,6 @@
 import requests
 
-# 1. Shuffle a new deck
 deck_url_base = "https://deckofcardsapi.com/api/deck/new/shuffle/?deck_count="
-
-
-# 2. Draw cards from the deck
-def draw_cards(count=2):
-    draw_url = f"https://deckofcardsapi.com/api/deck/{deck_id}/draw/?count={count}"
-    response = requests.get(draw_url)
-    return response.json()["cards"]
-
-# Draw 2 cards for a player (for example)
-player_hand = draw_cards(2)
-print("Player's Hand:", player_hand)
 
 
 class BlackJack: 
