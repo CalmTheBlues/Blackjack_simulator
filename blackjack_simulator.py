@@ -64,12 +64,12 @@ class BlackJack:
             print(f"{player_name}'s hand: {', '.join(card_names)}")
 
 
-    
-if __name__ == "__main__":
+def main():
     while (True):
         num_decks = input("How many decks would you like to play with (1-6): ")
-            if num_decks == 'e':
-                break
+        if num_decks == 'e':
+            print("Thanks for playing")
+            break
         
         game = BlackJack(num_decks)
         numBots = int(input("How man bots would you like to play with: "))
@@ -77,4 +77,7 @@ if __name__ == "__main__":
         game.printHands()
         game.hit(0)
         game.printHands()
+
+if __name__ == "__main__":
+    main()
     
