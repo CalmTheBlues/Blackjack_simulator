@@ -23,7 +23,7 @@ class BlackJack:
         self.card_count = 52 * int(num_decks)
         self.max_deck = 52 * int(num_decks)
 
-    def getDeckAmount(self):
+    def getDeckAmount(self): #API allows 1-6 decks
         while True:
             num_decks = input("How many decks would you like to play with (1-6): ")
             if num_decks.lower() == 'e':
@@ -34,7 +34,7 @@ class BlackJack:
             else:
                 print("Input out of range, must be in [1,6]")
 
-    def getBotAmount(self):
+    def getBotAmount(self): #validate amount of bots, have only 6 people at the table not including dealer
         while True:
             try:
                 num_bots = int(input("How many bots would you like to play with (0-5): "))
@@ -69,10 +69,7 @@ class BlackJack:
     
     def deckSize(self): #use this to keep track of how many cards are left in the deck
         if self.card_count <= (0.25 * self.max_deck):
-            print("time to reshuffle")
-    
-
-
+            print("time to reshuffle") 
 
     def printHands(self):
         for idx, hand in enumerate(self.player_hands):
@@ -85,6 +82,36 @@ class BlackJack:
             
             card_names = [f"{card['value']} of {card['suit']}" for card in hand]
             print(f"{player_name}'s hand: {', '.join(card_names)}")
+    
+    def playerHandVal(self, idx): #should return the player's hand's value 
+        playerTotal = 0
+        for item in self.player_hands[idx]:
+            if item["value"] == 0: #face card values are labeled as '0'
+                playerTotal += 10
+            elif 1 < item["value"] < 10:
+                playerTotal += item["value"]
+            if item["value"] == 1 and playerTotal + item["value"] > 21: #handle Ace's 1 or 11 cases
+                pass 
+
+
+    def promptDecision(self, idx):
+        #add something to determine if they are eligible to double down or split cards
+        while(True):
+            try:
+                move = int(input("What move would you like to make: 1: stay, 2: hit"))
+                # Check if the input is within the valid range
+                if move == 1 or move == 2:
+                    break  # Exit the loop once a valid number is entered
+                else:
+                    print("Move unavailable") 
+            except ValueError:
+                print("Invalid input. Please enter either 1 or 2.")
+        
+        if move == 1: #hit
+            self.hit(idx)
+            return 1
+        if move == 2: #stay
+            return 2
 
 
 def main():
@@ -96,8 +123,19 @@ def main():
         playGame = False
     game.getBotAmount()
     print(playGame)
+    l = len(game.player_hands)
     while(playGame):
-        pass
+        for idx in range(l):
+            if idx == 1: #dealer's turn
+                continue
+            playerTotal = game.playerHandVal(idx) #will need to add function to determine if it is a bust or if it is blackjack
+                                                    #if blackjack will need to add win and payout functions
+            move = game.promptDecision(idx)
+            while move == 1: #keep offering decision to hit or stay until they bust, hit 21, or stay
+                move = game.promptDecision(idx)
+            
+            
+
 
 if __name__ == "__main__":
     main()
