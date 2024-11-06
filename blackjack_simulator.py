@@ -2,6 +2,21 @@ import requests
 
 deck_url_base = "https://deckofcardsapi.com/api/deck/new/shuffle/?deck_count="
 
+card_value = {
+    '2': 2,
+    '3': 3,
+    '4': 4,
+    '5': 5,
+    '6': 6,
+    '7': 7,
+    '8': 8,
+    '9': 9,
+    '10': 10,
+    'JACK': 10,
+    'QUEEN': 10,
+    'KING': 10,
+    'ACE': 1
+}
 
 class BlackJack: 
     def __init__(self):
@@ -66,6 +81,7 @@ class BlackJack:
         drawn_card = card.json()["cards"][0]
         self.player_hands[idx].append(drawn_card)
         self.card_count -= 1
+        self.printHands()
     
     def deckSize(self): #use this to keep track of how many cards are left in the deck
         if self.card_count <= (0.25 * self.max_deck):
@@ -85,14 +101,20 @@ class BlackJack:
     
     def playerHandVal(self, idx): #should return the player's hand's value 
         playerTotal = 0
-        for item in self.player_hands[idx]:
-            if item["value"] == 0: #face card values are labeled as '0'
-                playerTotal += 10
-            elif 1 < item["value"] < 10:
-                playerTotal += item["value"]
-            if item["value"] == 1 and playerTotal + item["value"] > 21: #handle Ace's 1 or 11 cases
-                pass 
-
+        num_aces = 0
+        for card in self.player_hands[idx]:
+            if card['value'] == 'ACE':
+                num_aces += 1
+            else:
+                playerTotal += card_value[card['value']]
+                
+        for _ in range(num_aces):
+            if playerTotal + 11 <= 21:
+                playerTotal + 11
+            else:
+                playerTotal + 1
+                
+        return playerTotal
 
     def promptDecision(self, idx):
         #add something to determine if they are eligible to double down or split cards
@@ -112,6 +134,35 @@ class BlackJack:
             return 1
         if move == 2: #stay
             return 2
+        
+    def revealDealer(self):
+        for card in self.player_hands[1]:
+            card_names = [f"{card['value']} of {card['suit']}"]
+            print(f"Dealer's hand: {card_names}")
+            
+    def dealerHit(self):
+        dealer_value = self.playerHandVal(1)
+        #dealer has a soft 17 (17 with an ace, this means the dealer has to hit)
+        if dealer_value == 17 and any(card['value'] == 1 for card in self.player_hands[1]):
+            self.hit(1)
+        dealer_value = self.playerHandVal(1)
+        while dealer_value < 17:
+            self.hit(1)
+            self.printHands()
+            dealer_value = self.playerHandVal(1)
+            
+    def isBlackjack(self, idx):
+        has_ace = False
+        has_ten = False
+        for card in self.player_hands[idx]:
+            if card['value'] == 1:
+                has_ace = True
+            if card['value'] == 0 | card['value'] == 10:
+                has_ten = True
+                
+        return has_ace and has_ten
+            
+                
 
 
 def main():
@@ -133,6 +184,8 @@ def main():
             move = game.promptDecision(idx)
             while move == 1: #keep offering decision to hit or stay until they bust, hit 21, or stay
                 move = game.promptDecision(idx)
+        game.revealDealer()
+        game.dealerHit()
             
             
 
