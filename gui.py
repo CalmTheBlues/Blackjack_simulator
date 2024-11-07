@@ -5,14 +5,23 @@ import pygame
 
 screenWidth = 1280
 screenHeight = 720
-WHITE = pygame.Color(0, 250, 0)
+TABLE_COLOR = pygame.Color(53, 101, 77)
 
-def playGame(screenWidth=1280, screenHeight=720):
+def playGame(screenWidth, screenHeight, game):
+    game = game
     pygame.init()
     # Display objects
     screen = pygame.display.set_mode((screenWidth, screenHeight))
-    screen.fill(WHITE)
+    pygame.display.set_caption("Blackjack")
+    screen.fill(TABLE_COLOR)
     #table = pygame.Surface.fill(WHITE, screen)
+    card = pygame.Rect(0, 0, 120, 120)
+    pygame.draw.rect(screen, (0, 0, 0), card)
+
+    p1Area = pygame.Surface((640, 640))
+
+    
+    screen.blit(p1Area, 0, 0)
 
     pygame.display.update()
 
@@ -41,7 +50,8 @@ def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
 
     # Close this window and start the game with the info passed to you from the server
     app.withdraw()     # Hides the window (we'll kill it later)
-    playGame(screenWidth, screenHeight)  # User will be either left or right paddle
+    game = BlackJack()
+    playGame(screenWidth, screenHeight, game)  # User will be either left or right paddle
     #app.quit()         # Kills the window
 
 
