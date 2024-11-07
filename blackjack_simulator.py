@@ -1,4 +1,5 @@
 import requests
+import math
 
 deck_url_base = "https://deckofcardsapi.com/api/deck/new/shuffle/?deck_count="
 
@@ -53,6 +54,9 @@ class Player:
     def split(self):
         # to do
         x += 1
+        
+    def Blackjack(self):
+        self.balance += math.ceil(self.current_bet * 2.5)
 
 class BlackJack: 
     def __init__(self):
@@ -147,12 +151,13 @@ class BlackJack:
         drawn_card = card.json()["cards"][0]
         self.players[idx].hand.append(drawn_card)
         self.card_count -= 1
-        self.printHands()
+        #self.printHands(True)
         
     def doubleDown(self):
         #TO DO
         self.players[0].doubleDown()
         self.hit(0)
+        self.printHands(True)
         
     def split(self):
         #TO DO
@@ -162,7 +167,7 @@ class BlackJack:
         if self.card_count <= (0.25 * self.max_deck):
             print("time to reshuffle") 
 
-    def printHands(self):
+    def printHands(self, hide_dealers):
         for idx, player in enumerate(self.players):
             if idx == 0:
                 player_name = "Player"
@@ -171,7 +176,10 @@ class BlackJack:
             else:
                 player_name = f"Bot {idx - 1}"
             
-            card_names = [f"{card['value']} of {card['suit']}" for card in player.hand]
+            if idx == 1 and hide_dealers:
+                card_names = [f"{player.hand[0]['value']} of {player.hand[0]['suit']} and UNKNOWN"]
+            else:
+                card_names = [f"{card['value']} of {card['suit']}" for card in player.hand]
             print(f"{player_name}'s hand: {', '.join(card_names)}")
     
     def playerHandVal(self, idx): #should return the player's hand's value 
@@ -213,6 +221,7 @@ class BlackJack:
         
         if move == 1: #hit
             self.hit(idx)
+            self.printHands(True)
             return 1
         if move == 2: #stay
             return 2
@@ -230,14 +239,16 @@ class BlackJack:
     def dealerHit(self):
         #dealer_value = self.playerHandVal(1)
         dealer_value = self.players[1].getHandValue()
-        print(f"dealer value: {dealer_value}")
+        print(f"Dealer's value: {dealer_value}")
+        self.printHands(False)
         #dealer has a soft 17 (17 with an ace, this means the dealer has to hit)
         if dealer_value == 17 and any(card['value'] == 1 for card in self.players[1].hand):
             self.hit(1)
+            self.printHands(False)
         dealer_value = self.players[1].getHandValue()
         while max(dealer_value) < 17:
             self.hit(1)
-            self.printHands()
+            self.printHands(False)
             dealer_value = self.players[1].getHandValue()
             if dealer_value == []:
                 return
@@ -247,9 +258,9 @@ class BlackJack:
         has_ace = False
         has_ten = False
         for card in self.players[idx].hand:
-            if card['value'] == 1:
+            if card_value[card['value']] == 1:
                 has_ace = True
-            if card['value'] == 0 | card['value'] == 10:
+            if card_value[card['value']] == 0 | card_value[card['value']] == 10:
                 has_ten = True
                 
         return has_ace and has_ten
@@ -270,17 +281,18 @@ def main():
     if decks == 1: 
         print("Thanks for playing")
         playGame = False
+        
     game.getBalanceAmount()
     game.getBotAmount()
-    
     game.deal_cards()
-    #print(playGame)
-    #game.printHands()
-    #l = len(game.player_hands)
     l = len(game.players)
     while(playGame):
+        
         game.getBetAmount(0)
-        game.printHands()
+        game.printHands(True)
+        #need to change this to be based on the current length of players instead of length
+        #at the start. but before this we need to implement taking bots out of the game if they run
+        #out of money
         for idx in range(l):
             if idx == 1: #dealer's turn
                 continue
@@ -288,19 +300,30 @@ def main():
                 continue
             #playerTotal = game.playerHandVal(idx) #will need to add function to determine if it is a bust or if it is blackjack
                                                     #if blackjack will need to add win and payout functions
-            playerTotals = game.players[idx].getHandValue()
+            if game.isBlackjack(idx):
+                game.players[idx].Blackjack()
+                continue
+            
             move = game.promptDecision(idx)
+            
             if move == 2 or move == 3:
                 continue
+            
             while move == 1: #keep offering decision to hit or stay until they bust, hit 21, or stay
+                #need to fix that if the user hits they cannot double down or split
                 move = game.promptDecision(idx)
                 if move == 2:
                     continue
+                
         game.revealDealer()
         game.dealerHit()
+        
         player_value = game.getMaxScoreFromHand(0)
         dealer_value = game.getMaxScoreFromHand(1)
-        if dealer_value == None:
+        
+        if game.isBlackjack(0):
+            print(f"BLACKJACK!")
+        elif dealer_value == None:
             print(f"Dealer has busted. Everyone in wins")
             game.players[0].balance += game.players[0].current_bet * 2
         elif player_value > dealer_value:
@@ -310,8 +333,9 @@ def main():
             print(f"Player has pushed with the dealer")
             game.players[0].balance += game.players[0].current_bet
         elif player_value < dealer_value:
-            game.players[0].current_bet = 0
             print(f"Player has lost the hand. Current balance is {game.players[0].balance}")
+        
+        game.players[0].current_bet = 0
             
         if game.players[0].balance == 0:
             print("Out of money. Restart to play again")
