@@ -4,33 +4,43 @@ from blackjack_simulator import BlackJack, Player
 import pygame
 from io import BytesIO
 import requests
+import sys
 
-def display_card_image(screen, card_url, position, size=(128, 128)):
-    response = requests.get(card_url)
-    img_data = BytesIO(response.content)
-    card_img = pygame.image.load(img_data)
-    card_img = pygame.transform.scale(card_img, size)
-    screen.blit(card_img, position)
-    pygame.display.flip()
+BASE_WIDTH = 1280
+BASE_HEIGHT = 720
 
 screenWidth = 1280
 screenHeight = 720
 TABLE_COLOR = pygame.Color(53, 101, 77)
+window_size = (1280, 720)
 
-def playGame(screenWidth, screenHeight, game, player):
+def display_card_image(screen, card_url, base_position, scale_x, scale_y, base_size=(128, 128)):
+    response = requests.get(card_url)
+    img_data = BytesIO(response.content)
+    card_img = pygame.image.load(img_data)
+
+    # Scale image size based on window scale factors
+    scaled_size = (int(base_size[0] * scale_x), int(base_size[1] * scale_y))
+    card_img = pygame.transform.scale(card_img, scaled_size)
+
+    # Scale position
+    scaled_position = (int(base_position[0] * scale_x), int(base_position[1] * scale_y))
+
+    screen.blit(card_img, scaled_position)
+
+
+def playGame(window_size, game, player):
     pygame.init()
 
     game = game
     player = player
 
-    # Set up game window
-    screen = pygame.display.set_mode((screenWidth, screenHeight))
+    #Initial information
+    screen = pygame.display.set_mode(window_size, pygame.RESIZABLE)
     pygame.display.set_caption("Blackjack")
     screen.fill(TABLE_COLOR)
+    clock = pygame.time.Clock()
 
-    #p1Area = pygame.Surface((640, 640))
-
-    #Initial information
     game.players.append(player)
     game.playmates(0)
     game.getNewDecks("1")
@@ -41,14 +51,27 @@ def playGame(screenWidth, screenHeight, game, player):
     player_cards = []
     player_cards = [player.hand[i]['images']['png'] for i in range(len(player.hand))]
 
-    display_card_image(screen, player_cards[0], (0, 0))
-    display_card_image(screen, player_cards[1], (120, 120))
-    #card1 = pygame.image.load(player_cards[0])
-
     
-    #screen.blit(card1, p1Area)
+    # Calculate scale factors for x and y
+    scale_x = window_size[0] / BASE_WIDTH
+    scale_y = window_size[1] / BASE_HEIGHT
 
-    pygame.display.update()
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.VIDEORESIZE:
+                window_size = event.size
+                pygame.display.set_caption("Blackjack")
+                screen.fill(TABLE_COLOR)
+                scale_x = window_size[0] / BASE_WIDTH
+                scale_y = window_size[1] / BASE_HEIGHT
+
+
+        display_card_image(screen, player_cards[0], (576, 440), scale_x, scale_y)
+        display_card_image(screen, player_cards[1], (596, 420), scale_x, scale_y)
+        pygame.display.update()
 
 
 def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
@@ -77,8 +100,9 @@ def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
     app.withdraw()     # Hides the window (we'll kill it later)
     game = BlackJack()
     player = Player(1234)
-    playGame(screenWidth, screenHeight, game, player)  # User will be either left or right paddle
-    #app.quit()         # Kills the window
+    playGame(window_size, game, player)  # User will be either left or right paddle
+    app.quit()         # Kills the window
+    sys.exit()
 
 
 
