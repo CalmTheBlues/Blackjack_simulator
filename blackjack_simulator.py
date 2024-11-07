@@ -45,6 +45,14 @@ class Player:
     
     def addCard(self, card):
         self.hand.append(card)
+        
+    def doubleDown(self):
+        self.balance = self.balance - self.current_bet
+        self.current_bet *= 2
+        
+    def split(self):
+        # to do
+        x += 1
 
 class BlackJack: 
     def __init__(self):
@@ -140,6 +148,15 @@ class BlackJack:
         self.players[idx].hand.append(drawn_card)
         self.card_count -= 1
         self.printHands()
+        
+    def doubleDown(self):
+        #TO DO
+        self.players[0].doubleDown()
+        self.hit(0)
+        
+    def split(self):
+        #TO DO
+        x+=1
     
     def deckSize(self): #use this to keep track of how many cards are left in the deck
         if self.card_count <= (0.25 * self.max_deck):
@@ -177,14 +194,22 @@ class BlackJack:
         #add something to determine if they are eligible to double down or split cards
         while(True):
             try:
-                move = int(input("What move would you like to make (1: hit, 2: stay, 3: double down): "))
+                #to address adding the option to split when the user has double of the same number(not value)
+                if (self.players[idx].hand[0]['value'] == self.players[idx].hand[1]['value']):
+                    can_split = True
+                    move = int(input("What move would you like to make (1: hit, 2: stay, 3: double down, 4: split): "))
+                else:
+                    move = int(input("What move would you like to make (1: hit, 2: stay, 3: double down): "))
                 # Check if the input is within the valid range
-                if move == 1 or move == 2 or move == 3:
+                if move == 1 or move == 2 or move == 3 or (move == 4 and can_split):
                     break  # Exit the loop once a valid number is entered
                 else:
                     print("Move unavailable") 
             except ValueError:
-                print("Invalid input. Please enter either 1, 2, or 3.")
+                if can_split:
+                    print("Invalid input. Please enter either 1, 2, 3, or 4.")
+                else:
+                    print("Invalid input. Please enter either 1, 2, or 3.")
         
         if move == 1: #hit
             self.hit(idx)
@@ -192,8 +217,10 @@ class BlackJack:
         if move == 2: #stay
             return 2
         if move == 3:
-            self.hit(idx) #implement double down function
+            self.doubleDown()
             return 3
+        if move == 4:
+            self.split()
         
     def revealDealer(self):
         for card in self.players[1].hand:
@@ -263,9 +290,7 @@ def main():
                                                     #if blackjack will need to add win and payout functions
             playerTotals = game.players[idx].getHandValue()
             move = game.promptDecision(idx)
-            if move == 2:
-                continue
-            if move == 3:
+            if move == 2 or move == 3:
                 continue
             while move == 1: #keep offering decision to hit or stay until they bust, hit 21, or stay
                 move = game.promptDecision(idx)
@@ -277,6 +302,7 @@ def main():
         dealer_value = game.getMaxScoreFromHand(1)
         if dealer_value == None:
             print(f"Dealer has busted. Everyone in wins")
+            game.players[0].balance += game.players[0].current_bet * 2
         elif player_value > dealer_value:
             print(f"Player has won {game.players[0].current_bet}")
             game.players[0].balance += game.players[0].current_bet * 2
@@ -284,7 +310,13 @@ def main():
             print(f"Player has pushed with the dealer")
             game.players[0].balance += game.players[0].current_bet
         elif player_value < dealer_value:
+            game.players[0].current_bet = 0
             print(f"Player has lost the hand. Current balance is {game.players[0].balance}")
+            
+        if game.players[0].balance == 0:
+            print("Out of money. Restart to play again")
+            playGame = False
+            
         
         
         
