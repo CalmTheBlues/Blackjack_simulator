@@ -1,27 +1,52 @@
 import tkinter as tk
 from tkinter import *
-from blackjack_simulator import BlackJack
+from blackjack_simulator import BlackJack, Player
 import pygame
+from io import BytesIO
+import requests
+
+def display_card_image(screen, card_url, position, size=(128, 128)):
+    response = requests.get(card_url)
+    img_data = BytesIO(response.content)
+    card_img = pygame.image.load(img_data)
+    card_img = pygame.transform.scale(card_img, size)
+    screen.blit(card_img, position)
+    pygame.display.flip()
 
 screenWidth = 1280
 screenHeight = 720
 TABLE_COLOR = pygame.Color(53, 101, 77)
 
-def playGame(screenWidth, screenHeight, game):
-    game = game
+def playGame(screenWidth, screenHeight, game, player):
     pygame.init()
-    # Display objects
+
+    game = game
+    player = player
+
+    # Set up game window
     screen = pygame.display.set_mode((screenWidth, screenHeight))
     pygame.display.set_caption("Blackjack")
     screen.fill(TABLE_COLOR)
-    #table = pygame.Surface.fill(WHITE, screen)
-    card = pygame.Rect(0, 0, 120, 120)
-    pygame.draw.rect(screen, (0, 0, 0), card)
 
-    p1Area = pygame.Surface((640, 640))
+    #p1Area = pygame.Surface((640, 640))
+
+    #Initial information
+    game.players.append(player)
+    game.playmates(0)
+    game.getNewDecks("1")
+    print(game.deck_id)
+    game.deal_cards()
+
+    print(player.hand)
+    player_cards = []
+    player_cards = [player.hand[i]['images']['png'] for i in range(len(player.hand))]
+
+    display_card_image(screen, player_cards[0], (0, 0))
+    display_card_image(screen, player_cards[1], (120, 120))
+    #card1 = pygame.image.load(player_cards[0])
 
     
-    screen.blit(p1Area, 0, 0)
+    #screen.blit(card1, p1Area)
 
     pygame.display.update()
 
@@ -51,7 +76,8 @@ def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
     # Close this window and start the game with the info passed to you from the server
     app.withdraw()     # Hides the window (we'll kill it later)
     game = BlackJack()
-    playGame(screenWidth, screenHeight, game)  # User will be either left or right paddle
+    player = Player(1234)
+    playGame(screenWidth, screenHeight, game, player)  # User will be either left or right paddle
     #app.quit()         # Kills the window
 
 
