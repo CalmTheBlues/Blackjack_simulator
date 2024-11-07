@@ -1,4 +1,5 @@
 import requests
+import math
 
 deck_url_base = "https://deckofcardsapi.com/api/deck/new/shuffle/?deck_count="
 
@@ -18,6 +19,45 @@ card_value = {
     'ACE': 1
 }
 
+class Player:
+    def __init__(self, budget):
+        self.balance = budget
+        self.current_bet = 0
+        self.hand = []
+
+    def placeBet(self, bet_amount):
+        self.current_bet = bet_amount
+
+    def getHandValue(self) -> int:
+        playerTotal = 0
+        num_aces = 0
+        for card in self.hand:
+            if card['value'] == 'ACE':
+                num_aces += 1
+            else:
+                playerTotal += card_value[card['value']]
+                
+        possible_totals = {playerTotal}
+        for _ in range(num_aces):
+            possible_totals = {total + 1 for total in possible_totals} | {total + 11 for total in possible_totals}
+        valid_totals = [total for total in possible_totals if total <= 21]
+        
+        return sorted(valid_totals)
+    
+    def addCard(self, card):
+        self.hand.append(card)
+        
+    def doubleDown(self):
+        self.balance = self.balance - self.current_bet
+        self.current_bet *= 2
+        
+    def split(self):
+        # to do
+        x += 1
+        
+    def Blackjack(self):
+        self.balance += math.ceil(self.current_bet * 2.5)
+
 class BlackJack: 
     def __init__(self):
         self.deck_url = None
@@ -25,7 +65,8 @@ class BlackJack:
         self.deck_id = None
         self.num_chips = 0
         self.wager = None
-        self.player_hands = []
+        self.players: list[Player] = []
+        #self.player_hands = []
         self.num_bots = 0
         self.card_count = None
         self.max_deck = None
@@ -61,11 +102,39 @@ class BlackJack:
                     print("Input out of range, must be in [0,5].") 
             except ValueError:
                 print("Invalid input. Please enter an integer between 0 and 5.")
-
+                
+    def getBalanceAmount(self):
+        while True:
+            try:
+                balance = int(input("How much money would you like to play with: "))
+                if balance > 0:
+                    self.players.append(Player(balance))
+                    break
+                else:
+                    print("Balance needs to be above zero.")
+            except ValueError:
+                print("Invalid input. Please enter an integer between 0 and 2^31 - 1")
+                
+    def getBetAmount(self, idx) -> int:
+        while True:
+            available_balance = self.players[idx].balance
+            try:
+                bet = int(input(f"Available balance is {available_balance}. How much money would you like to bet on this hand: "))
+                if bet > 0 and bet <= available_balance:
+                    self.players[idx].current_bet = bet
+                    self.players[idx].balance -= bet
+                    break
+                else:
+                    print("Balance needs to be above 0 and less than current balance.")
+            except ValueError:
+                print(f"Invalid input. Please enter an integer between 0 and {available_balance}")
 
     def playmates(self, numbots):
         self.num_bots = numbots
-        self.player_hands = [[] for _ in range(numbots + 2)]  # empty lists for each hand plus 2 is for  yourself and dealer
+        #self.player_hands = [[] for _ in range(numbots + 2)]  # empty lists for each hand plus 2 is for  yourself and dealer
+        self.players.append(Player(-1)) #append dealer as special player with balance -1
+        for _ in range(numbots): # append bots with budget 100
+            self.players.append(Player(100))
 
     def deal_cards(self):
         draw_url = f"https://deckofcardsapi.com/api/deck/{self.deck_id}/draw/?count={1}"
@@ -73,22 +142,33 @@ class BlackJack:
             for j in range(self.num_bots + 2): #you are at index 0, dealer is 1 bots take up the rest
                 card = requests.get(draw_url)
                 drawn_card = card.json()["cards"][0]  # get the first card from the response
-                self.player_hands[j].append(drawn_card)  # append the card to the player's hand
+                self.players[j].hand.append(drawn_card)  # append the card to the player's hand
                 self.card_count -= 1
+                
     def hit(self, idx):
         draw_url = f"https://deckofcardsapi.com/api/deck/{self.deck_id}/draw/?count={1}"
         card = requests.get(draw_url)
         drawn_card = card.json()["cards"][0]
-        self.player_hands[idx].append(drawn_card)
+        self.players[idx].hand.append(drawn_card)
         self.card_count -= 1
-        self.printHands()
+        #self.printHands(True)
+        
+    def doubleDown(self):
+        #TO DO
+        self.players[0].doubleDown()
+        self.hit(0)
+        self.printHands(True)
+        
+    def split(self):
+        #TO DO
+        x+=1
     
     def deckSize(self): #use this to keep track of how many cards are left in the deck
         if self.card_count <= (0.25 * self.max_deck):
             print("time to reshuffle") 
 
-    def printHands(self):
-        for idx, hand in enumerate(self.player_hands):
+    def printHands(self, hide_dealers):
+        for idx, player in enumerate(self.players):
             if idx == 0:
                 player_name = "Player"
             elif idx == 1:
@@ -96,72 +176,101 @@ class BlackJack:
             else:
                 player_name = f"Bot {idx - 1}"
             
-            card_names = [f"{card['value']} of {card['suit']}" for card in hand]
+            if idx == 1 and hide_dealers:
+                card_names = [f"{player.hand[0]['value']} of {player.hand[0]['suit']} and UNKNOWN"]
+            else:
+                card_names = [f"{card['value']} of {card['suit']}" for card in player.hand]
             print(f"{player_name}'s hand: {', '.join(card_names)}")
     
     def playerHandVal(self, idx): #should return the player's hand's value 
         playerTotal = 0
         num_aces = 0
-        for card in self.player_hands[idx]:
+        for card in self.players[idx].hand:
             if card['value'] == 'ACE':
                 num_aces += 1
             else:
                 playerTotal += card_value[card['value']]
                 
+        possible_totals = {playerTotal}
         for _ in range(num_aces):
-            if playerTotal + 11 <= 21:
-                playerTotal + 11
-            else:
-                playerTotal + 1
-                
-        return playerTotal
+            possible_totals = {total + 1 for total in possible_totals} | {total + 11 for total in possible_totals}
+        valid_totals = [total for total in possible_totals if total <= 21]
+        
+        return sorted(valid_totals)
 
     def promptDecision(self, idx):
         #add something to determine if they are eligible to double down or split cards
         while(True):
             try:
-                move = int(input("What move would you like to make: 1: stay, 2: hit"))
+                #to address adding the option to split when the user has double of the same number(not value)
+                if (self.players[idx].hand[0]['value'] == self.players[idx].hand[1]['value']):
+                    can_split = True
+                    move = int(input("What move would you like to make (1: hit, 2: stay, 3: double down, 4: split): "))
+                else:
+                    move = int(input("What move would you like to make (1: hit, 2: stay, 3: double down): "))
                 # Check if the input is within the valid range
-                if move == 1 or move == 2:
+                if move == 1 or move == 2 or move == 3 or (move == 4 and can_split):
                     break  # Exit the loop once a valid number is entered
                 else:
                     print("Move unavailable") 
             except ValueError:
-                print("Invalid input. Please enter either 1 or 2.")
+                if can_split:
+                    print("Invalid input. Please enter either 1, 2, 3, or 4.")
+                else:
+                    print("Invalid input. Please enter either 1, 2, or 3.")
         
         if move == 1: #hit
             self.hit(idx)
+            self.printHands(True)
             return 1
         if move == 2: #stay
             return 2
+        if move == 3:
+            self.doubleDown()
+            return 3
+        if move == 4:
+            self.split()
         
     def revealDealer(self):
-        for card in self.player_hands[1]:
+        for card in self.players[1].hand:
             card_names = [f"{card['value']} of {card['suit']}"]
             print(f"Dealer's hand: {card_names}")
             
     def dealerHit(self):
-        dealer_value = self.playerHandVal(1)
+        #dealer_value = self.playerHandVal(1)
+        dealer_value = self.players[1].getHandValue()
+        print(f"Dealer's value: {dealer_value}")
+        self.printHands(False)
         #dealer has a soft 17 (17 with an ace, this means the dealer has to hit)
-        if dealer_value == 17 and any(card['value'] == 1 for card in self.player_hands[1]):
+        if dealer_value == 17 and any(card['value'] == 1 for card in self.players[1].hand):
             self.hit(1)
-        dealer_value = self.playerHandVal(1)
-        while dealer_value < 17:
+            self.printHands(False)
+        dealer_value = self.players[1].getHandValue()
+        while max(dealer_value) < 17:
             self.hit(1)
-            self.printHands()
-            dealer_value = self.playerHandVal(1)
+            self.printHands(False)
+            dealer_value = self.players[1].getHandValue()
+            if dealer_value == []:
+                return
+            print(dealer_value)
             
     def isBlackjack(self, idx):
         has_ace = False
         has_ten = False
-        for card in self.player_hands[idx]:
-            if card['value'] == 1:
+        for card in self.players[idx].hand:
+            if card_value[card['value']] == 1:
                 has_ace = True
-            if card['value'] == 0 | card['value'] == 10:
+            if card_value[card['value']] == 0 | card_value[card['value']] == 10:
                 has_ten = True
                 
         return has_ace and has_ten
-            
+    
+    def getMaxScoreFromHand(self, idx):
+        values = self.players[idx].getHandValue()
+        if len(values) == 1:
+            return values[0]
+        elif len(values) > 1:
+            return max(values)
                 
 
 
@@ -172,20 +281,69 @@ def main():
     if decks == 1: 
         print("Thanks for playing")
         playGame = False
+        
+    game.getBalanceAmount()
     game.getBotAmount()
-    print(playGame)
-    l = len(game.player_hands)
+    game.deal_cards()
+    l = len(game.players)
     while(playGame):
+        
+        game.getBetAmount(0)
+        game.printHands(True)
+        #need to change this to be based on the current length of players instead of length
+        #at the start. but before this we need to implement taking bots out of the game if they run
+        #out of money
         for idx in range(l):
             if idx == 1: #dealer's turn
                 continue
-            playerTotal = game.playerHandVal(idx) #will need to add function to determine if it is a bust or if it is blackjack
+            if idx != 0:
+                continue
+            #playerTotal = game.playerHandVal(idx) #will need to add function to determine if it is a bust or if it is blackjack
                                                     #if blackjack will need to add win and payout functions
+            if game.isBlackjack(idx):
+                game.players[idx].Blackjack()
+                continue
+            
             move = game.promptDecision(idx)
+            
+            if move == 2 or move == 3:
+                continue
+            
             while move == 1: #keep offering decision to hit or stay until they bust, hit 21, or stay
+                #need to fix that if the user hits they cannot double down or split
                 move = game.promptDecision(idx)
+                if move == 2:
+                    continue
+                
         game.revealDealer()
         game.dealerHit()
+        
+        player_value = game.getMaxScoreFromHand(0)
+        dealer_value = game.getMaxScoreFromHand(1)
+        
+        if game.isBlackjack(0):
+            print(f"BLACKJACK!")
+        elif dealer_value == None:
+            print(f"Dealer has busted. Everyone in wins")
+            game.players[0].balance += game.players[0].current_bet * 2
+        elif player_value > dealer_value:
+            print(f"Player has won {game.players[0].current_bet}")
+            game.players[0].balance += game.players[0].current_bet * 2
+        elif player_value == dealer_value:
+            print(f"Player has pushed with the dealer")
+            game.players[0].balance += game.players[0].current_bet
+        elif player_value < dealer_value:
+            print(f"Player has lost the hand. Current balance is {game.players[0].balance}")
+        
+        game.players[0].current_bet = 0
+            
+        if game.players[0].balance == 0:
+            print("Out of money. Restart to play again")
+            playGame = False
+            
+        
+        
+        
             
             
 
