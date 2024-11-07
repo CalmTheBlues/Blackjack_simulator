@@ -18,6 +18,33 @@ card_value = {
     'ACE': 1
 }
 
+class Player:
+    def __init__(self, budget):
+        self.balance = budget
+        self.current_bet = 0
+        self.hand = []
+
+    def placeBet(self, bet_amount):
+        self.current_bet = bet_amount
+
+    def getHandValue(self) -> int:
+        playerTotal = 0
+        num_aces = 0
+        for card in self.hand:
+            if card['value'] == 'ACE':
+                num_aces += 1
+            else:
+                playerTotal += card_value[card['value']]
+                
+        possible_totals = {playerTotal}
+        for _ in range(num_aces):
+            possible_totals = {total + 1 for total in possible_totals} | {total + 11 for total in possible_totals}
+        valid_totals = [total for total in possible_totals if total <= 21]
+        
+        return sorted(valid_totals)
+
+    def getDecision(self)        
+
 class BlackJack: 
     def __init__(self):
         self.deck_url = None
@@ -108,13 +135,12 @@ class BlackJack:
             else:
                 playerTotal += card_value[card['value']]
                 
+        possible_totals = {playerTotal}
         for _ in range(num_aces):
-            if playerTotal + 11 <= 21:
-                playerTotal + 11
-            else:
-                playerTotal + 1
-                
-        return playerTotal
+            possible_totals = {total + 1 for total in possible_totals} | {total + 11 for total in possible_totals}
+        valid_totals = [total for total in possible_totals if total <= 21]
+        
+        return sorted(valid_totals)
 
     def promptDecision(self, idx):
         #add something to determine if they are eligible to double down or split cards
