@@ -30,6 +30,7 @@ card_value = {
 
 class Player:
     def __init__(self, budget):
+        self.original_balance = budget  # Store the original balance
         self.balance = budget
         self.current_bet = 0
         self.hand = []
@@ -86,6 +87,28 @@ class BlackJack:
         self.game_log = []  # New feature for logging games
         self.hand_log = []  # Log for individual hands within a game
         self.round_active = True  # New attribute to track if the round is active
+        self.loss_limit = None  # Loss limit for responsible gambling
+
+    def set_loss_limit(self):
+        while True:
+            try:
+                limit = float(input("Enter the loss limit you want to set: "))
+                if limit <= 0:
+                    print("Please enter a positive value for the loss limit.")
+                else:
+                    self.loss_limit = limit
+                    print(f"Your loss limit is set to {self.loss_limit}.")
+                    break
+            except ValueError:
+                print("Invalid input. Please enter a valid number.")
+
+    def check_loss_limit(self):
+        original_balance = self.players[0].original_balance
+        current_balance = self.players[0].balance
+        if self.loss_limit is not None and (original_balance - current_balance) >= self.loss_limit:
+            print("You have reached your loss limit. Quitting the game for responsible gambling.")
+            return True
+        return False
 
     def log_hand(self, result, player_balance):
         # Log the result of each hand
@@ -332,6 +355,9 @@ class BlackJack:
         for player in self.players:
             player.resetHand()
 
+        # Check if loss limit is reached after losing a bet
+        if result == "Loss" and self.check_loss_limit():
+            exit()
 
     def view_game_log(self):
         # View the game log after each hand if the player wants to
@@ -366,6 +392,7 @@ def main():
         playGame = False
 
     game.getBalanceAmount()
+    game.set_loss_limit()  # Set the loss limit for responsible gambling
     game.getBotAmount()
 
     while playGame:
@@ -374,6 +401,8 @@ def main():
         l = len(game.players)
 
         game.getBetAmount(0)
+        if not game.round_active:
+            break
         game.printHands(True)
 
         # Player's turn
