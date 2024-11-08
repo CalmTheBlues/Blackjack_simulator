@@ -85,6 +85,7 @@ class BlackJack:
         self.max_deck = None
         self.game_log = []  # New feature for logging games
         self.hand_log = []  # Log for individual hands within a game
+        self.round_active = True  # New attribute to track if the round is active
 
     def log_hand(self, result, player_balance):
         # Log the result of each hand
@@ -242,74 +243,76 @@ class BlackJack:
     def promptDecision(self, idx):
         while(True):
             try:
-                if (self.players[idx].hand[0]['value'] == self.players[idx].hand[1]['value']):
+                if self.players[idx].hand[0]['value'] == self.players[idx].hand[1]['value']:
                     can_split = True
                     move = int(input("What move would you like to make (1: hit, 2: stay, 3: double down, 4: split): "))
                 else:
                     can_split = False
                     move = int(input("What move would you like to make (1: hit, 2: stay, 3: double down): "))
+
                 if move in [1, 2, 3] or (move == 4 and can_split):
                     break
                 else:
-                    print("Move unavailable") 
+                    print("Move unavailable")
             except ValueError:
                 if can_split:
                     print("Invalid input. Please enter either 1, 2, 3, or 4.")
                 else:
                     print("Invalid input. Please enter either 1, 2, or 3.")
-        
-        if move == 1: #hit
+
+        if move == 1:  # hit
             self.hit(idx)
             player_value = self.getMaxScoreFromHand(idx)
             if player_value is None or player_value > 21:
                 print("Player has busted.")
+                self.round_active = False  # Mark the round as inactive because the player busted
                 self.end_game("Loss")
-                return 2
+                return 2  # Signal that the player has busted and round must end
             self.printHands(True)
             return 1
-        if move == 2: #stay
+        elif move == 2:  # stay
             return 2
-        if move == 3:
+        elif move == 3:  # double down
             self.doubleDown()
             player_value = self.getMaxScoreFromHand(idx)
             if player_value is None or player_value > 21:
                 print("Player has busted.")
+                self.round_active = False  # Mark the round as inactive because the player busted
                 self.end_game("Loss")
-                return 2
+                return 2  # Signal that the player has busted and round must end
             return 3
-        if move == 4:
+        elif move == 4:  # split (if applicable)
             self.split()
             return 4
-        
+
+    
     def revealDealer(self):
         card_names = [f"{card['value']} of {card['suit']}" for card in self.players[1].hand]
         print(f"Dealer's hand: {', '.join(card_names)}")
-            
+
     def dealerHit(self):
+        if not self.round_active:  # If the round is no longer active, the dealer should not proceed
+            return
+
         dealer_value = self.players[1].getHandValue()
+        if dealer_value is None:  # If dealer hand is empty or busts, do not proceed
+            return
+
         print(f"Dealer's value: {dealer_value}")
         self.printHands(False)
+
+        # Handle soft 17 case
         if dealer_value == 17 and any(card['value'] == 'ACE' for card in self.players[1].hand):
             self.hit(1)
             self.printHands(False)
+
         dealer_value = self.players[1].getHandValue()
-        while dealer_value and max(dealer_value) < 17:
+        while dealer_value and max(dealer_value) < 17 and self.round_active:
             self.hit(1)
             self.printHands(False)
             dealer_value = self.players[1].getHandValue()
-            print(dealer_value)
-            
-    def isBlackjack(self, idx):
-        has_ace = False
-        has_ten = False
-        for card in self.players[idx].hand:
-            if card_value[card['value']] == 1:
-                has_ace = True
-            if card_value[card['value']] == 10:
-                has_ten = True
-                
-        return has_ace and has_ten
-    
+            print(f"Dealer's new value: {dealer_value}")
+        
     def getMaxScoreFromHand(self, idx):
         values = self.players[idx].getHandValue()
         if values is None:
@@ -319,12 +322,16 @@ class BlackJack:
         elif len(values) > 1:
             return max(values)
         
+
     def end_game(self, result):
+        print(f"Round ended with result: {result}")
         player_balance = self.players[0].balance
         self.log_hand(result, player_balance)
         self.log_game()  # Ensure the game log is updated after each game
+        self.round_active = False  # Mark the round as inactive
         for player in self.players:
             player.resetHand()
+
 
     def view_game_log(self):
         # View the game log after each hand if the player wants to
@@ -337,72 +344,100 @@ class BlackJack:
                     for hand_idx, hand in enumerate(entry['hands']):
                         print(f"Hand {hand_idx + 1}: Result - {hand['result']}, Player Balance - {hand['player_balance']}")
 
+    def isBlackjack(self, idx):
+        has_ace = False
+        has_ten = False
+        for card in self.players[idx].hand:
+            if card['value'] == 'ACE':
+                has_ace = True
+            if card_value[card['value']] == 10:
+                has_ten = True
+
+        return has_ace and has_ten
+
+
 def main():
     playGame = True
     game = BlackJack()
     game.load_game_log()  # Load previous game log if available
-    decks = game.getDeckAmount() #0 or 1. 1 means don't play anymore
-    if decks == 1: 
+    decks = game.getDeckAmount()  # 0 or 1. 1 means don't play anymore
+    if decks == 1:
         print("Thanks for playing")
         playGame = False
-        
+
     game.getBalanceAmount()
     game.getBotAmount()
-    while(playGame):
+
+    while playGame:
+        game.round_active = True  # Reactivate the round before starting a new one
         game.deal_cards()
         l = len(game.players)
-        
+
         game.getBetAmount(0)
         game.printHands(True)
+
+        # Player's turn
         for idx in range(l):
-            if idx == 1: #dealer's turn
+            if idx == 1:  
                 continue
             if idx != 0:
                 continue
+
+            # Check if player has blackjack at the start
             if game.isBlackjack(idx):
                 print("BLACKJACK!")
                 game.players[idx].Blackjack()
+                game.round_active = False
                 game.end_game("Blackjack")
-                continue
-            
-            move = game.promptDecision(idx)
-            while move == 1: #keep offering decision to hit or stay until they bust, hit 21, or stay
+                break
+
+            # Player makes moves until they stay or bust
+            while game.round_active:
                 move = game.promptDecision(idx)
-                if move == 2:
+                if move == 2:  # Player chooses to stay
                     break
-            
-        game.revealDealer()
-        game.dealerHit()
-        
-        player_value = game.getMaxScoreFromHand(0)
-        dealer_value = game.getMaxScoreFromHand(1)
-        
-        if player_value is None or player_value > 21:
-            print("Player has busted.")
-            game.end_game("Loss")
-        elif dealer_value is None or dealer_value > 21:
-            print("Dealer has busted. Player wins.")
-            game.players[0].balance += game.players[0].current_bet * 2
-            game.end_game("Win")
-        elif player_value > dealer_value:
-            print(f"Player wins with {player_value}")
-            game.players[0].balance += game.players[0].current_bet * 2
-            game.end_game("Win")
-        elif player_value == dealer_value:
-            print(f"Push with the dealer. Player's bet is returned.")
-            game.players[0].balance += game.players[0].current_bet
-            game.end_game("Push")
-        else:
-            print(f"Player has lost the hand. Current balance is {game.players[0].balance}")
-            game.end_game("Loss")
-        
+                elif move == 3:  # Player doubles down
+                    break
+
+            if not game.round_active:  # If the player busted, end the round
+                break
+
+        # Dealer's turn
+        if game.round_active:
+            game.revealDealer()
+            game.dealerHit()
+
+            # Determine the outcome
+            player_value = game.getMaxScoreFromHand(0)
+            dealer_value = game.getMaxScoreFromHand(1)
+
+            if dealer_value is None or dealer_value > 21:
+                print("Dealer has busted. Player wins.")
+                game.players[0].balance += game.players[0].current_bet * 2
+                game.end_game("Win")
+            elif player_value > dealer_value:
+                print(f"Player wins with {player_value}")
+                game.players[0].balance += game.players[0].current_bet * 2
+                game.end_game("Win")
+            elif player_value == dealer_value:
+                print(f"Push with the dealer. Player's bet is returned.")
+                game.players[0].balance += game.players[0].current_bet
+                game.end_game("Push")
+            else:
+                print(f"Player has lost the hand. Current balance is {game.players[0].balance}")
+                game.end_game("Loss")
+
+        # Reset bet for the next round
         game.players[0].current_bet = 0
-            
+
+        # Check if player is out of money
         if game.players[0].balance == 0:
             print("Out of money. Restart to play again")
             playGame = False
-        
+
         game.view_game_log()
+
+
 
 if __name__ == "__main__":
     main()
