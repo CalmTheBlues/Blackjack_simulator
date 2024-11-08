@@ -75,32 +75,15 @@ def playGame(window_size, game, player):
 
 
 def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
-    # Purpose:      This method is fired when the join button is clicked
-    # Arguments:
-    # ip            A string holding the IP address of the server
-    # port          A string holding the port the server is using
-    # errorLabel    A tk label widget, modify it's text to display messages to the user (example below)
-    # app           The tk window object, needed to kill the window
-    
-    # Create a socket and connect to the server
-    # You don't have to use SOCK_STREAM, use what you think is best
-    #client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #client.connect((ip, int(port)))
-
-    # Get the required information from your server (screen width, height & player paddle, "left or "right)
-    #resp = client.recv(512)
-    #initData = json.loads(resp.decode())
-
-    # If you have messages you'd like to show the user use the errorLabel widget like so
     errorLabel.config(text=f"Some update text. You input: IP: {ip}, Port: {port}")
-    # You may or may not need to call this, depending on how many times you update the label
     errorLabel.update()     
 
     # Close this window and start the game with the info passed to you from the server
-    app.withdraw()     # Hides the window (we'll kill it later)
+    app.withdraw()     # Hides the window
     game = BlackJack()
     player = Player(1234)
-    playGame(window_size, game, player)  # User will be either left or right paddle
+    playGame(window_size, game, player)  # User begins playing the game
+    
     app.quit()         # Kills the window
     sys.exit()
 
