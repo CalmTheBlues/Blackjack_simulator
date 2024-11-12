@@ -80,7 +80,7 @@ class BlackJack:
         self.deck_id = None
         self.num_chips = 0
         self.wager = None
-        self.players: list[Player] = []
+        self.players: list[Player] = [Player(-1)]
         self.num_bots = 0
         self.card_count = None
         self.max_deck = None
@@ -200,7 +200,7 @@ class BlackJack:
 
     def playmates(self, numbots):
         self.num_bots = numbots
-        self.players.append(Player(-1)) #append dealer as special player with balance -1
+        #self.players.append(Player(-1)) #append dealer as special player with balance -1
         for _ in range(numbots): # append bots with budget 100
             self.players.append(Player(100))
 
