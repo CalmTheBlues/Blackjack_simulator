@@ -1,4 +1,5 @@
 import requests
+import random
 import math
 
 deck_url_base = "https://deckofcardsapi.com/api/deck/new/shuffle/?deck_count="
@@ -24,9 +25,68 @@ class Player:
         self.balance = budget
         self.current_bet = 0
         self.hand = []
+        self.smart = None
 
     def placeBet(self, bet_amount):
         self.current_bet = bet_amount
+
+    def botPlay(self, players, smart): #logic for how a bot will make a move
+        # Decision for hard totals (no Aces or Aces counted as 1)
+        player_total = self.getHandValue()
+        dealer_card = players[0].hand[0]['value']
+        if player_total <= 8:
+            return 'hit'
+        elif player_total == 9:
+            if 3 <= dealer_card <= 6:
+                return 'double down'
+            else:
+                return 'hit'
+        elif player_total == 10:
+            if dealer_card <= 9:
+                return 'double down'
+            else:
+                return 'hit'
+        elif player_total == 11:
+            return 'double down'
+        elif player_total == 12:
+            if 4 <= dealer_card <= 6:
+                return 'stand'
+            else:
+                return 'hit'
+        elif 13 <= player_total <= 16:
+            if 2 <= dealer_card <= 6:
+                return 'stand'
+            else:
+                return 'hit'
+        elif player_total >= 17:
+            return 'stand'
+
+        # Decision for soft totals (Ace counted as 11)
+        if 13 <= player_total <= 16:
+            if dealer_card >= 7:
+                return 'hit'
+            else:
+                return 'double down'
+        elif player_total == 17:
+            if dealer_card >= 7:
+                return 'hit'
+            else:
+                return 'double down'
+        elif player_total == 18:
+            if dealer_card <= 8:
+                return 'stand'
+            else:
+                return 'hit'
+        elif player_total == 19:
+            return 'stand'
+        elif player_total == 20:
+            return 'stand'
+        elif player_total == 21:
+            return 'stand'
+
+        # Default to hit if no specific strategy matches
+        return 'hit'
+
 
     def getHandValue(self) -> int:
         playerTotal = 0
@@ -314,7 +374,10 @@ def main():
                 move = game.promptDecision(idx)
                 if move == 2:
                     continue
-                
+            for i in range(game.num_bots): #bot's turns
+                move = game.players[i+2].botPlay(game.players, True)
+                if move == 'hit':
+                    game.hit(i+2)
         game.revealDealer()
         game.dealerHit()
         
