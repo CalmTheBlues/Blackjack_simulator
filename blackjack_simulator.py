@@ -30,58 +30,58 @@ class Player:
     def placeBet(self, bet_amount):
         self.current_bet = bet_amount
 
-    def botPlay(self, players, smart): #logic for how a bot will make a move
+    def botPlay(self, players, max_val, min_val): #logic for how a bot will make a move
         # Decision for hard totals (no Aces or Aces counted as 1)
-        player_total = self.getHandValue()
         dealer_card = players[0].hand[0]['value']
-        if player_total <= 8:
+        dealer_card = card_value[dealer_card]
+        if min_val <= 8:
             return 'hit'
-        elif player_total == 9:
+        elif min_val == 9:
             if 3 <= dealer_card <= 6:
                 return 'double down'
             else:
                 return 'hit'
-        elif player_total == 10:
+        elif min_val == 10:
             if dealer_card <= 9:
                 return 'double down'
             else:
                 return 'hit'
-        elif player_total == 11:
+        elif min_val == 11:
             return 'double down'
-        elif player_total == 12:
+        elif min_val == 12:
             if 4 <= dealer_card <= 6:
                 return 'stand'
             else:
                 return 'hit'
-        elif 13 <= player_total <= 16:
+        elif 13 <= min_val <= 16:
             if 2 <= dealer_card <= 6:
                 return 'stand'
             else:
                 return 'hit'
-        elif player_total >= 17:
+        elif min_val >= 17:
             return 'stand'
 
         # Decision for soft totals (Ace counted as 11)
-        if 13 <= player_total <= 16:
+        if 13 <= max_val <= 16:
             if dealer_card >= 7:
                 return 'hit'
             else:
                 return 'double down'
-        elif player_total == 17:
+        elif max_val == 17:
             if dealer_card >= 7:
                 return 'hit'
             else:
                 return 'double down'
-        elif player_total == 18:
+        elif max_val == 18:
             if dealer_card <= 8:
                 return 'stand'
             else:
                 return 'hit'
-        elif player_total == 19:
+        elif max_val == 19:
             return 'stand'
-        elif player_total == 20:
+        elif max_val == 20:
             return 'stand'
-        elif player_total == 21:
+        elif max_val == 21:
             return 'stand'
 
         # Default to hit if no specific strategy matches
@@ -143,10 +143,10 @@ class BlackJack:
         while True:
             num_decks = input("How many decks would you like to play with (1-6): ")
             if num_decks.lower() == 'e':
-                return 1
+                return -1
             if int(num_decks) > 0 and int(num_decks) <= 6:
                 self.getNewDecks(num_decks) 
-                return 0
+                return int(num_decks)
             else:
                 print("Input out of range, must be in [1,6]")
 
@@ -223,9 +223,9 @@ class BlackJack:
         #TO DO
         x+=1
     
-    def deckSize(self): #use this to keep track of how many cards are left in the deck
+    def deckSize(self, num_decks): #use this to keep track of how many cards are left in the deck
         if self.card_count <= (0.25 * self.max_deck):
-            print("time to reshuffle") 
+            self.getNewDecks(num_decks)
 
     def printHands(self, hide_dealers):
         for idx, player in enumerate(self.players):
@@ -331,6 +331,12 @@ class BlackJack:
             return values[0]
         elif len(values) > 1:
             return max(values)
+    def getMinScoreFromHand(self, idx):
+        values = self.players[idx].getHandValue()
+        if len(values) == 1:
+            return values[0]
+        elif len(values) > 1:
+            return min(values)
                 
 
 
@@ -338,52 +344,60 @@ def main():
     playGame = True
     game = BlackJack()
     decks = game.getDeckAmount() #0 or 1. 1 means don't play anymore
-    if decks == 1: 
+    if decks == -1: 
         print("Thanks for playing")
         playGame = False
         
     game.getBalanceAmount()
     game.getBotAmount()
-    game.deal_cards()
     l = len(game.players)
     while(playGame):
-        
+        game.deal_cards()
         game.getBetAmount(0)
         game.printHands(True)
         #need to change this to be based on the current length of players instead of length
         #at the start. but before this we need to implement taking bots out of the game if they run
         #out of money
-        for idx in range(l):
-            if idx == 1: #dealer's turn
-                continue
-            if idx != 0:
-                continue
-            #playerTotal = game.playerHandVal(idx) #will need to add function to determine if it is a bust or if it is blackjack
-                                                    #if blackjack will need to add win and payout functions
+        for idx in range(l): #one round loop
             if game.isBlackjack(idx):
                 game.players[idx].Blackjack()
                 continue
-            
-            move = game.promptDecision(idx)
-            
-            if move == 2 or move == 3:
+            if idx == 1: #dealer's turn
                 continue
-            
-            while move == 1: #keep offering decision to hit or stay until they bust, hit 21, or stay
-                #need to fix that if the user hits they cannot double down or split
+            if idx != 0 and idx != 1: #sanity check
+                max_val = game.getMaxScoreFromHand(idx)
+                min_val = game.getMinScoreFromHand(idx)
+                move = game.players[idx].botPlay(game.players, max_val, min_val)
+                if move == "stand": 
+                    continue
+                elif move == 'hit':
+                    while move == 'hit':
+                        game.hit(idx)
+                        move = game.players[idx].botPlay(game.players, max_val, min_val)
+                elif move == "double down":
+                    game.players[idx].doubleDown()
+                    game.hit(idx)
+
+            if idx == 0:
                 move = game.promptDecision(idx)
+                
                 if move == 2:
                     continue
-            for i in range(game.num_bots): #bot's turns
-                move = game.players[i+2].botPlay(game.players, True)
-                if move == 'hit':
-                    game.hit(i+2)
+                elif move == 3:
+                    game.players[0].doubleDown()
+                    game.hit(0)
+                
+                while move == 1: #keep offering decision to hit or stay until they bust, hit 21, or stay
+                    #need to fix that if the user hits they cannot double down or split
+                    move = game.promptDecision(idx)
+                    if move == 2:
+                        continue
+  
         game.revealDealer()
         game.dealerHit()
         
         player_value = game.getMaxScoreFromHand(0)
         dealer_value = game.getMaxScoreFromHand(1)
-        
         if game.isBlackjack(0):
             print(f"BLACKJACK!")
         elif dealer_value == None:
@@ -403,10 +417,7 @@ def main():
         if game.players[0].balance == 0:
             print("Out of money. Restart to play again")
             playGame = False
-            
-        
-        
-        
+        game.deckSize(decks)
             
             
 
