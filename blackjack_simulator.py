@@ -34,6 +34,8 @@ class Player:
         # Decision for hard totals (no Aces or Aces counted as 1)
         dealer_card = players[0].hand[0]['value']
         dealer_card = card_value[dealer_card]
+        if min_val > 21:
+            return 'stand'
         if min_val <= 8:
             return 'hit'
         elif min_val == 9:
@@ -208,6 +210,7 @@ class BlackJack:
     def hit(self, idx):
         draw_url = f"https://deckofcardsapi.com/api/deck/{self.deck_id}/draw/?count={1}"
         card = requests.get(draw_url)
+        print(f"Card: {card}")
         drawn_card = card.json()["cards"][0]
         self.players[idx].hand.append(drawn_card)
         self.card_count -= 1
@@ -373,7 +376,11 @@ def main():
                 elif move == 'hit':
                     while move == 'hit':
                         game.hit(idx)
+                        max_val = game.getMaxScoreFromHand(idx)
+                        min_val = game.getMinScoreFromHand(idx)
                         move = game.players[idx].botPlay(game.players, max_val, min_val)
+                        if move != 'hit':
+                            break
                 elif move == "double down":
                     game.players[idx].doubleDown()
                     game.hit(idx)
@@ -400,6 +407,8 @@ def main():
         dealer_value = game.getMaxScoreFromHand(1)
         if game.isBlackjack(0):
             print(f"BLACKJACK!")
+        elif player_value == None:
+            print(f"Player has busted")
         elif dealer_value == None:
             print(f"Dealer has busted. Everyone in wins")
             game.players[0].balance += game.players[0].current_bet * 2
