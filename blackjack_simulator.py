@@ -27,6 +27,9 @@ class Player:
         self.hand = []
         self.smart = None
 
+    def resetHand(self):
+        self.hand=[]
+
     def placeBet(self, bet_amount):
         self.current_bet = bet_amount
 
@@ -102,7 +105,7 @@ class Player:
         possible_totals = {playerTotal}
         for _ in range(num_aces):
             possible_totals = {total + 1 for total in possible_totals} | {total + 11 for total in possible_totals}
-        valid_totals = [total for total in possible_totals if total <= 21]
+        valid_totals = [total for total in possible_totals] #removed  if total <= 21
         
         return sorted(valid_totals)
     
@@ -340,6 +343,12 @@ class BlackJack:
             return values[0]
         elif len(values) > 1:
             return min(values)
+    
+    def resetPlayerHands(self):
+        l = len(self.players)
+        for i in range(l):
+            self.players[i].resetHand()
+
                 
 
 
@@ -426,7 +435,8 @@ def main():
         if game.players[0].balance == 0:
             print("Out of money. Restart to play again")
             playGame = False
-        game.deckSize(decks)
+        game.deckSize(decks) #reshuffle deck if card count is getting low
+        game.resetPlayerHands() #reset players' hands 
             
             
 
