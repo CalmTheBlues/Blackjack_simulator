@@ -37,6 +37,30 @@ class Player:
         # Decision for hard totals (no Aces or Aces counted as 1)
         dealer_card = players[0].hand[0]['value']
         dealer_card = card_value[dealer_card]
+
+        # Decision for soft totals (Ace counted as 11)
+        if 13 <= max_val <= 16:
+            if dealer_card >= 7:
+                return 'hit'
+            else:
+                return 'double down'
+        elif max_val == 17:
+            if dealer_card >= 7:
+                return 'hit'
+            else:
+                return 'double down'
+        elif max_val == 18:
+            if dealer_card <= 8:
+                return 'stand'
+            else:
+                return 'hit'
+        elif max_val == 19:
+            return 'stand'
+        elif max_val == 20:
+            return 'stand'
+        elif max_val == 21:
+            return 'stand'
+        #Decisions for hard total
         if min_val > 21:
             return 'stand'
         if min_val <= 8:
@@ -64,29 +88,6 @@ class Player:
             else:
                 return 'hit'
         elif min_val >= 17:
-            return 'stand'
-
-        # Decision for soft totals (Ace counted as 11)
-        if 13 <= max_val <= 16:
-            if dealer_card >= 7:
-                return 'hit'
-            else:
-                return 'double down'
-        elif max_val == 17:
-            if dealer_card >= 7:
-                return 'hit'
-            else:
-                return 'double down'
-        elif max_val == 18:
-            if dealer_card <= 8:
-                return 'stand'
-            else:
-                return 'hit'
-        elif max_val == 19:
-            return 'stand'
-        elif max_val == 20:
-            return 'stand'
-        elif max_val == 21:
             return 'stand'
 
         # Default to hit if no specific strategy matches
