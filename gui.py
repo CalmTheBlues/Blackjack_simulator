@@ -72,13 +72,32 @@ def playGame(window_size, game, player):
     screen.fill(TABLE_COLOR)
     clock = pygame.time.Clock()
 
-    rectangle = pygame.Rect((0, 0), (100, 100))
+
+    stand_button = pygame.Rect((150, 150), (100, 100))
+    stand_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 32)
+    stand_text = stand_font.render("Stand", True, (255, 255, 255))
+
+    hit_button = pygame.Rect((0, 0), (100, 100))
+    hit_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 32)
+
+    hit_text = hit_font.render("Hit", True, (255, 255, 255))
+
+
+    # Center the text inside the button
+    hit_text_rect = hit_text.get_rect(center=hit_button.center)
+    stand_text_rect = stand_text.get_rect(center=stand_button.center)
+    pygame.display.update()
 
     running = True
     while running:
-        pygame.draw.rect(screen, (255, 0, 0), rectangle)
+        pygame.draw.rect(screen, (255, 0, 0), hit_button)
+        screen.blit(hit_text, hit_text_rect)
+
+        pygame.draw.rect(screen, (255, 0, 0), stand_button)
+        screen.blit(stand_text, stand_text_rect)
 
         pygame.display.update()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -90,8 +109,10 @@ def playGame(window_size, game, player):
                 scale_y = window_size[1] / BASE_HEIGHT
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 x,y = pygame.mouse.get_pos()
-                if rectangle.collidepoint(x, y):
+                if hit_button.collidepoint(x, y):
                     game.hit(1)
+                #elif stand_button.collidepoint(x, y):
+                    #game.stand()
 
 
         # Calculate scale factors for x and y
