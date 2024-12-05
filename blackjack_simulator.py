@@ -70,7 +70,6 @@ class BlackJack:
         self.num_bots = 0
         self.card_count = None
         self.max_deck = None
-        self.current_player_idx = 0
 
     def getNewDecks(self, num_decks):
         self.deck_url = deck_url_base + num_decks
@@ -154,13 +153,6 @@ class BlackJack:
         self.card_count -= 1
         #self.printHands(True)
         
-    def stand(self, idx):
-        num_players = len(self.players)
-        if num_players == idx or num_players == 2:
-            self.current_player_idx = 1
-        else:
-            self.current_player_idx += 1
-        
     def doubleDown(self):
         #TO DO
         self.players[0].doubleDown()
@@ -232,7 +224,6 @@ class BlackJack:
             self.printHands(True)
             return 1
         if move == 2: #stay
-            self.stand(idx)
             return 2
         if move == 3:
             self.doubleDown()
