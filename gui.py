@@ -13,6 +13,8 @@ BASE_HEIGHT = 720
 TABLE_COLOR = pygame.Color(53, 101, 77) #green
 window_size = (1280, 720) #default size
 
+card_back = 'https://deckofcardsapi.com/static/img/back.png'
+
 
 PLAYER_ZONES = {
     #min x, max x, min y, max y
@@ -45,11 +47,34 @@ def display_card_image(screen: Surface, card_url: str, base_position: tuple, sca
     screen.blit(card_img, scaled_position)
 
 
-def display_player_cards(screen, player_cards, base_position, scale_x, scale_y, card_offset=(30, 20), base_size=(128, 128)):
-    for i, card_url in enumerate(player_cards):
-        # Calculate the position for each card in the player's hand
-        card_position = (base_position[0] + i * card_offset[0], base_position[2] + i * card_offset[1])
-        display_card_image(screen, card_url, card_position, scale_x, scale_y, base_size)
+def display_player_cards(screen, player_cards, base_position, scale_x, scale_y, hide_one=0, card_offset=(30, 20), base_size=(128, 128)):
+    if hide_one:
+        for i, card_url in enumerate(player_cards):
+            card_position = (base_position[0] + i * card_offset[0], base_position[2] + i *card_offset[1])
+            if i == 1:
+                display_card_image(screen, card_back, card_position, scale_x, scale_y, base_size)
+            else:
+                display_card_image(screen, card_url, card_position, scale_x, scale_y, base_size)
+
+    else:
+        for i, card_url in enumerate(player_cards):
+            # Calculate the position for each card in the player's hand
+            card_position = (base_position[0] + i * card_offset[0], base_position[2] + i * card_offset[1])
+            display_card_image(screen, card_url, card_position, scale_x, scale_y, base_size)
+
+def display_player_balance(screen, player, base_position, scale_x, scale_y, base_size=(128, 128)):
+    balance = player.balance
+
+   # Render the balance text
+    balance_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 24)
+    balance_text = balance_font.render(f"Balance: ${balance}", True, (255, 255, 255))
+
+    # Put player balance in the top left corner
+    text_position = (0, 0)
+
+    # Display the balance text on the screen
+    screen.blit(balance_text, text_position)
+
 
 def playGame(window_size, game, player):
     pygame.init()
@@ -71,14 +96,33 @@ def playGame(window_size, game, player):
     pygame.display.set_caption("Blackjack")
     screen.fill(TABLE_COLOR)
     clock = pygame.time.Clock()
+    clock.tick(60)  # Control the game loop speed
 
-    rectangle = pygame.Rect((0, 0), (100, 100))
+
+
+    # Button properties
+    button_width = 100
+    button_height = 50
+    button_spacing = 20  # Space between buttons
 
     running = True
     while running:
-        pygame.draw.rect(screen, (255, 0, 0), rectangle)
-
         pygame.display.update()
+
+        # Recalculate button positions for the bottom-left corner
+        hit_button = pygame.Rect(
+            20,  # Left margin
+            window_size[1] - button_height - 20,  # Bottom margin
+            button_width,
+            button_height,
+        )
+        stand_button = pygame.Rect(
+            hit_button.right + button_spacing,  # Place next to the "Hit" button
+            window_size[1] - button_height - 20,
+            button_width,
+            button_height,
+        )
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -90,8 +134,11 @@ def playGame(window_size, game, player):
                 scale_y = window_size[1] / BASE_HEIGHT
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 x,y = pygame.mouse.get_pos()
-                if rectangle.collidepoint(x, y):
+                if hit_button.collidepoint(x, y):
                     game.hit(1)
+                    value = player.getHandValue()
+                #elif stand_button.collidepoint(x, y):
+                    #game.stand()
 
 
         # Calculate scale factors for x and y
@@ -99,19 +146,30 @@ def playGame(window_size, game, player):
         scale_y = window_size[1] / BASE_HEIGHT
 
         # Display dealer's cards
-        display_player_cards(screen, dealer_cards, PLAYER_ZONES["dealer"], scale_x, scale_y)
+        display_player_cards(screen, dealer_cards, PLAYER_ZONES["dealer"], scale_x, scale_y, 1)
+        display_player_balance(screen, player, PLAYER_ZONES['player1'], scale_x, scale_y)
 
         # Display player's cards (assuming a single player for now)
         display_player_cards(screen, player_cards, PLAYER_ZONES["player1"], scale_x, scale_y)
 
+        # In the game loop, before pygame.display.update()
+        pygame.draw.rect(screen, (255, 0, 0), hit_button)
+        hit_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 32)
+        hit_text = hit_font.render("Hit", True, (255, 255, 255))
+        hit_text_rect = hit_text.get_rect(center=hit_button.center)
+        screen.blit(hit_text, hit_text_rect)
 
+        pygame.draw.rect(screen, (255, 0, 0), stand_button)
+        stand_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 32)
+        stand_text = stand_font.render("Stand", True, (255, 255, 255))
+        stand_text_rect = stand_text.get_rect(center=stand_button.center)
+        screen.blit(stand_text, stand_text_rect)
 
         # UPDATE PLAYER HANDS INFORMATION
         player_cards = [player.hand[i]['images']['png'] for i in range(len(player.hand))]
         dealer_cards = [game.players[0].hand[i]['images']['png'] for i in range(len(game.players[0].hand))]
-        pygame.display.update()
-        clock.tick(10)  # Control the game loop speed
 
+        pygame.display.update()
 
 def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
     errorLabel.config(text=f"Some update text. You input: IP: {ip}, Port: {port}")
