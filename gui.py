@@ -108,6 +108,58 @@ def playGame(window_size, game, player):
     running = True
     while running:
         current_player = game.current_player_idx
+        scale_x = window_size[0] / BASE_WIDTH
+        scale_y = window_size[1] / BASE_HEIGHT
+
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.VIDEORESIZE:
+                window_size = event.size
+                pygame.display.set_caption("Blackjack")
+                screen.fill(TABLE_COLOR)
+                scale_x = window_size[0] / BASE_WIDTH
+                scale_y = window_size[1] / BASE_HEIGHT
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                x,y = pygame.mouse.get_pos()
+                if hit_button.collidepoint(x, y):
+                    game.hit(current_player)
+                elif stand_button.collidepoint(x, y):
+                    game.stand(current_player)
+
+
+        for idx, player in enumerate(game.players[1:]):
+            value = player.getHandValue()
+
+            # Create font and grab its size
+            value_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 16)
+
+            if game.isBlackjack(idx):
+                value_text = value_font.render("Blackjack!", True, (0, 255, 0))
+            elif value:
+                value_text = value_font.render(f"{value}", True, (255, 255, 255))
+            else:
+                value_text = value_font.render(f"Bust!", True, (255, 0, 0))
+
+            text_width, text_height = value_text.get_size()
+
+            position = PLAYER_ZONES[f'player{idx+1}'] # We skip over the dealer so add +1 to each idx
+            value_position = (
+            position[0] * scale_x,  # Adjust position to align with the player's cards
+            (position[2] - 30) * scale_y  # Slightly above the cards
+            )
+            
+
+            # Clear the previous value by drawing a rectangle over it
+            pygame.draw.rect(
+            screen,
+            TABLE_COLOR,  # Use the table's background color
+            pygame.Rect(value_position[0], value_position[1], text_width, text_height)
+            )
+
+            screen.blit(value_text, value_position)
+
 
         # Recalculate button positions for the bottom-left corner
         hit_button = pygame.Rect(
@@ -123,24 +175,7 @@ def playGame(window_size, game, player):
             button_height,
         )
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.VIDEORESIZE:
-                window_size = event.size
-                pygame.display.set_caption("Blackjack")
-                screen.fill(TABLE_COLOR)
-                scale_x = window_size[0] / BASE_WIDTH
-                scale_y = window_size[1] / BASE_HEIGHT
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                x,y = pygame.mouse.get_pos()
-                if hit_button.collidepoint(x, y):
-                    game.hit(current_player)
-                    value = player.getHandValue()
-                elif stand_button.collidepoint(x, y):
-                    game.stand(current_player)
-
-
+        
         # Calculate scale factors for x and y
         scale_x = window_size[0] / BASE_WIDTH
         scale_y = window_size[1] / BASE_HEIGHT
