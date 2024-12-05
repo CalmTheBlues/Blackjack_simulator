@@ -136,6 +136,7 @@ class BlackJack:
         self.num_bots = 0
         self.card_count = None
         self.max_deck = None
+        self.count = 0
 
     def getNewDecks(self, num_decks):
         self.deck_url = deck_url_base + num_decks
@@ -210,7 +211,23 @@ class BlackJack:
                 drawn_card = card.json()["cards"][0]  # get the first card from the response
                 self.players[j].hand.append(drawn_card)  # append the card to the player's hand
                 self.card_count -= 1
-                
+                if j == 1 and i == 1: #don't include dealer's unseen card
+                    continue
+                self.cardVal(drawn_card)
+                #print("line")
+    
+    def cardVal(self, card):
+        val = card_value[card['value']]
+        print(val)
+        if val >= 10:
+            self.count -= 1
+        elif 7 <= val <=9:
+            self.count += 0
+        elif val <= 6:
+            self.count += 1
+        #print(self.count)
+         
+
     def hit(self, idx):
         draw_url = f"https://deckofcardsapi.com/api/deck/{self.deck_id}/draw/?count={1}"
         card = requests.get(draw_url)
@@ -218,7 +235,7 @@ class BlackJack:
         drawn_card = card.json()["cards"][0]
         self.players[idx].hand.append(drawn_card)
         self.card_count -= 1
-        #self.printHands(True)
+        self.cardVal(drawn_card)
         
     def doubleDown(self):
         #TO DO
@@ -233,6 +250,7 @@ class BlackJack:
     def deckSize(self, num_decks): #use this to keep track of how many cards are left in the deck
         if self.card_count <= (0.25 * self.max_deck):
             self.getNewDecks(num_decks)
+            self.count = 0
 
     def printHands(self, hide_dealers):
         for idx, player in enumerate(self.players):
