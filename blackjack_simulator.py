@@ -125,7 +125,7 @@ class Player:
         self.balance += math.ceil(self.current_bet * 2.5)
 
 class BlackJack: 
-    def __init__(self):
+    def __init__(self, num_bots):
         self.deck_url = None
         self.deck = None
         self.deck_id = None
