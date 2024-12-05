@@ -88,6 +88,7 @@ class BlackJack:
         self.hand_log = []  # Log for individual hands within a game
         self.round_active = True  # New attribute to track if the round is active
         self.loss_limit = None  # Loss limit for responsible gambling
+        self.current_player_idx = 1
 
     def set_loss_limit(self):
         while True:
@@ -212,6 +213,7 @@ class BlackJack:
                 drawn_card = card.json()["cards"][0]  # get the first card from the response
                 self.players[j].hand.append(drawn_card)  # append the card to the player's hand
                 self.card_count -= 1
+        self.current_player_idx = 1
                 
     def hit(self, idx):
         draw_url = f"https://deckofcardsapi.com/api/deck/{self.deck_id}/draw/?count={1}"
@@ -220,9 +222,16 @@ class BlackJack:
         self.players[idx].hand.append(drawn_card)
         self.card_count -= 1
         
-    def doubleDown(self):
-        self.players[0].doubleDown()
-        self.hit(0)
+    def stand(self, idx):
+        if self.current_player_idx == len(self.players) - 1:
+            self.current_player_idx = 0
+        else:
+            self.current_player_idx = idx+1
+        
+    def doubleDown(self, idx):
+        self.players[idx].doubleDown()
+        self.hit(idx)
+        self.stand(idx)
         self.printHands(True)
         
     def split(self):
@@ -294,6 +303,7 @@ class BlackJack:
             self.printHands(True)
             return 1
         elif move == 2:  # stay
+            self.stand()
             return 2
         elif move == 3:  # double down
             self.doubleDown()
