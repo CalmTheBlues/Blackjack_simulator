@@ -19,7 +19,9 @@ card_back = 'https://deckofcardsapi.com/static/img/back.png'
 PLAYER_ZONES = {
     #min x, max x, min y, max y
     'dealer': (576, 800, 100, 200),
-    'player1': (576, 780, 400, 720)
+    'player1': (576, 780, 400, 720),
+    'player1split1': (350, 554, 400, 720),
+    'player1split2': (604, 808, 400, 720),
 }
 
 def display_card_image(screen: Surface, card_url: str, base_position: tuple, scale_x: float, scale_y: float, base_size=(128, 128)):
@@ -90,6 +92,9 @@ def playGame(window_size, game, player):
 
     player_cards = [player.hand[i]['images']['png'] for i in range(len(player.hand))]
     dealer_cards = [game.players[0].hand[i]['images']['png'] for i in range(len(game.players[0].hand))]
+    
+    player_cards_split_1 = []
+    player_cards_split_2 = []
 
     #Initial screen information
     screen = pygame.display.set_mode(window_size, pygame.RESIZABLE)
@@ -106,6 +111,7 @@ def playGame(window_size, game, player):
     button_spacing = 20  # Space between buttons
 
     running = True
+    split_hands = False
     while running:
         current_player = game.current_player_idx
         scale_x = window_size[0] / BASE_WIDTH
@@ -127,6 +133,9 @@ def playGame(window_size, game, player):
                     game.hit(current_player)
                 elif stand_button.collidepoint(x, y):
                     game.stand(current_player)
+                elif split_button.collidepoint(x, y):
+                    game.split(current_player)
+                    split_hands = True
 
 
         for idx, player in enumerate(game.players[1:]):
@@ -174,12 +183,19 @@ def playGame(window_size, game, player):
             button_width,
             button_height,
         )
+        
+        split_button = pygame.Rect(
+            stand_button.right + button_spacing,
+            window_size[1] - button_height - 20,
+            button_width,
+            button_height,
+        )
 
         
         # Calculate scale factors for x and y
         scale_x = window_size[0] / BASE_WIDTH
         scale_y = window_size[1] / BASE_HEIGHT
-
+        
         # Display player's balance
         display_player_balance(screen, player)
 
@@ -190,7 +206,14 @@ def playGame(window_size, game, player):
             display_player_cards(screen, dealer_cards, PLAYER_ZONES["dealer"], scale_x, scale_y, 1)
 
         # Display player's cards (assuming a single player for now)
-        display_player_cards(screen, player_cards, PLAYER_ZONES["player1"], scale_x, scale_y)
+        if split_hands:
+            player_cards_split_1 = [game.players[1].hand[i]['images']['png'] for i in range(len(game.players[1].hand))]
+            player_cards_split_2 = [game.players[2].hand[i]['images']['png'] for i in range(len(game.players[2].hand))]
+            
+            display_player_cards(screen, player_cards_split_1, PLAYER_ZONES["player1split1"], scale_x, scale_y)
+            display_player_cards(screen, player_cards_split_2, PLAYER_ZONES["player1split2"], scale_x, scale_y)
+        else:
+            display_player_cards(screen, player_cards, PLAYER_ZONES["player1"], scale_x, scale_y)
 
         # Draw hit button
         pygame.draw.rect(screen, (255, 0, 0), hit_button)
@@ -205,6 +228,14 @@ def playGame(window_size, game, player):
         stand_text = stand_font.render("Stand", True, (255, 255, 255))
         stand_text_rect = stand_text.get_rect(center=stand_button.center)
         screen.blit(stand_text, stand_text_rect)
+        
+        # Draw split button
+        if (player.isNotBot and player.hand[0]['value'] == player.hand[1]['value'] and len(player.hand) == 2):
+            pygame.draw.rect(screen, (255, 0, 0), split_button)
+            split_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 32)
+            split_text = split_font.render("Split", True, (255, 255, 255))
+            split_text_rect = split_text.get_rect(center=split_button.center)
+            screen.blit(split_text, split_text_rect)
 
         # UPDATE PLAYER HANDS INFORMATION
         player_cards = [player.hand[i]['images']['png'] for i in range(len(player.hand))]
@@ -219,7 +250,7 @@ def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
     # Close this window and start the game with the info passed to you from the server
     app.withdraw()     # Hides the window
     game = BlackJack()
-    player = Player(1234)
+    player = Player(1234, True)
     try:
         playGame(window_size, game, player)  # User begins playing the game
     except Exception as e:

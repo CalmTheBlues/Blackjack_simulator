@@ -29,12 +29,13 @@ card_value = {
 }
 
 class Player:
-    def __init__(self, budget):
+    def __init__(self, budget, canMakeDecision):
         self.original_balance = budget  # Store the original balance
         self.balance = budget
         self.current_bet = 0
         self.hand = []
         self.winnings = 0
+        self.isNotBot = canMakeDecision
 
     def placeBet(self, bet_amount):
         self.current_bet = bet_amount
@@ -80,7 +81,7 @@ class BlackJack:
         self.deck_id = None
         self.num_chips = 0
         self.wager = None
-        self.players: list[Player] = [Player(-1)]
+        self.players: list[Player] = [Player(-1, False)]
         self.num_bots = 0
         self.card_count = None
         self.max_deck = None
@@ -234,8 +235,14 @@ class BlackJack:
         self.stand(idx)
         self.printHands(True)
         
-    def split(self):
-        pass
+    def split(self, idx):
+        self.players[4] = self.players[3]
+        betting_amount = self.players[1].current_bet
+        new_hand = Player(betting_amount, True)
+        new_hand.hand[0] = self.players[1].hand[1]
+        self.players[1].hand.pop(1)
+        self.players[1].hit()
+        self.players[3] = new_hand
     
     def deckSize(self): #use this to keep track of how many cards are left in the deck
         if self.card_count <= (0.25 * self.max_deck):
@@ -314,7 +321,7 @@ class BlackJack:
                 self.end_game("Loss")
                 return 2  # Signal that the player has busted and round must end
             return 3
-        elif move == 4:  # split (if applicable)
+        elif move == 4 and can_split:  # split (if applicable)
             self.split()
             return 4
 
