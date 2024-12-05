@@ -88,6 +88,7 @@ class BlackJack:
         self.hand_log = []  # Log for individual hands within a game
         self.round_active = True  # New attribute to track if the round is active
         self.loss_limit = None  # Loss limit for responsible gambling
+        self.current_player_idx = 1
 
     def set_loss_limit(self):
         while True:
@@ -220,9 +221,16 @@ class BlackJack:
         self.players[idx].hand.append(drawn_card)
         self.card_count -= 1
         
+    def stand(self):
+        if self.current_player_idx == len(self.players) - 1:
+            self.current_player_idx = 0
+        else:
+            self.current_player_idx += 1
+        
     def doubleDown(self):
         self.players[0].doubleDown()
         self.hit(0)
+        self.stand()
         self.printHands(True)
         
     def split(self):
@@ -294,6 +302,7 @@ class BlackJack:
             self.printHands(True)
             return 1
         elif move == 2:  # stay
+            self.stand()
             return 2
         elif move == 3:  # double down
             self.doubleDown()
