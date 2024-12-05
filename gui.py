@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import *
-from blackjack_simulator_log import BlackJack, Player
+from blackjack_simulator import BlackJack, Player
 import pygame
 from io import BytesIO
 import requests
@@ -76,15 +76,16 @@ def display_player_balance(screen, player):
     screen.blit(balance_text, text_position)
 
 
-def playGame(window_size, game, player):
+def playGame(window_size, game, player, decks, bots):
     pygame.init()
 
     #Initial blackjack information
     game = game
     player = player
 
-    game.players.append(player)
-    game.getNewDecks("1")
+    # game.players.append(player)
+    game.getNewDecks(decks)
+    game.playmates(bots)
     print(game.deck_id)
     game.deal_cards()
 
@@ -212,52 +213,87 @@ def playGame(window_size, game, player):
 
         pygame.display.update()
 
-def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
-    errorLabel.config(text=f"Some update text. You input: IP: {ip}, Port: {port}")
-    errorLabel.update()     
 
-    # Close this window and start the game with the info passed to you from the server
-    app.withdraw()     # Hides the window
-    game = BlackJack()
-    player = Player(1234)
+def validate_input(decks, balance, bots):
+    error_message = ""
+    # Validate Number of Decks (must be an integer between 1 and 6)
+    if not decks.isdigit() or not (1 <= int(decks) <= 6):
+        error_message += "Number of Decks must be an integer between 1 and 6.\n"
+
+    # Validate Balance (must be a positive number)
     try:
-        playGame(window_size, game, player)  # User begins playing the game
+        balance = float(balance)
+        if balance <= 0:
+            error_message += "Balance must be a positive number.\n"
+    except ValueError:
+        error_message += "Balance must be a valid number.\n"
+
+    # Validate Number of Bots (must be an integer between 0 and 2)
+    if not bots.isdigit() or not (0 <= int(bots) <= 2):
+        error_message += "Number of Bots must be an integer between 0 and 2.\n"
+
+    return error_message
+
+def joinServer(decks, balance, bots, errorLabel, app):
+    # Validate inputs
+    error_message = validate_input(decks, balance, bots)
+    if error_message:
+        errorLabel.config(text=error_message, fg="red")
+        return
+    
+    # If inputs are valid, proceed
+    errorLabel.config(text="Joining server...", fg="green")
+    # Add logic to connect to the server or proceed with the app
+    app.withdraw()     # Hides the window
+
+    decks = str(decks)
+    balance = int(balance)
+    bots = int(bots)
+
+    game = BlackJack(bots)
+    player = Player(balance)
+    try:
+        playGame(window_size, game, player, decks, bots)  # User begins playing the game
     except Exception as e:
         print(e)
         app.quit()
 
     app.quit()         # Kills the window
     sys.exit()
+    
 
-
-
-# This displays the opening screen, you don't need to edit this (but may if you like)
 def startScreen():
     app = tk.Tk()
-    app.title("Server Info")
+    app.title("Game Info")
 
     image = tk.PhotoImage(file="./blackjack logo.png")
 
     titleLabel = tk.Label(image=image)
     titleLabel.grid(column=0, row=0, columnspan=2)
 
-    ipLabel = tk.Label(text="Server IP:")
-    ipLabel.grid(column=0, row=1, sticky="W", padx=8)
+    deckLabel = tk.Label(text="Number of Decks (1-6):")
+    deckLabel.grid(column=0, row=1, sticky="W", padx=8)
 
-    ipEntry = tk.Entry(app)
-    ipEntry.grid(column=1, row=1)
+    deckEntry = tk.Entry(app)
+    deckEntry.grid(column=1, row=1)
 
-    portLabel = tk.Label(text="Server Port:")
-    portLabel.grid(column=0, row=2, sticky="W", padx=8)
+    moneyLabel = tk.Label(text="Your Balance:")
+    moneyLabel.grid(column=0, row=2, sticky="W", padx=8)
 
-    portEntry = tk.Entry(app)
-    portEntry.grid(column=1, row=2)
+    moneyEntry = tk.Entry(app)
+    moneyEntry.grid(column=1, row=2)
+
+    botLabel = tk.Label(text="Number of Bots (0-2):")
+    botLabel.grid(column=0, row=3, sticky="W", padx=8)
+
+    botEntry = tk.Entry(app)
+    botEntry.grid(column=1, row=3)
 
     errorLabel = tk.Label(text="")
     errorLabel.grid(column=0, row=4, columnspan=2)
 
-    joinButton = tk.Button(text="Join", command=lambda: joinServer(ipEntry.get(), portEntry.get(), errorLabel, app))
-    joinButton.grid(column=0, row=3, columnspan=2)
+    joinButton = tk.Button(text="Join", command=lambda: joinServer(deckEntry.get(), moneyEntry.get(), botEntry.get(), errorLabel, app))
+    joinButton.grid(column=0, row=5, columnspan=2)
 
     app.mainloop()
 
