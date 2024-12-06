@@ -208,10 +208,11 @@ class BlackJack:
 
     def deal_cards(self):
         draw_url = f"https://deckofcardsapi.com/api/deck/{self.deck_id}/draw/?count={1}"
+        card = requests.get(draw_url)
+        drawn_card = card.json()["cards"][0]  # get the first card from the response
         for i in range(2): #will go through twice to deal two cards to each player
             for j in range(self.num_bots + 2): #you are at index 0, dealer is 1 bots take up the rest
-                card = requests.get(draw_url)
-                drawn_card = card.json()["cards"][0]  # get the first card from the response
+                
                 self.players[j].hand.append(drawn_card)  # append the card to the player's hand
                 self.card_count -= 1
         self.current_player_idx = 1
@@ -236,13 +237,19 @@ class BlackJack:
         self.printHands(True)
         
     def split(self, idx):
-        self.players[4] = self.players[3]
-        betting_amount = self.players[1].current_bet
+        print("got to here")
+        if len(self.players) < 2:
+            self.players[3] = self.players[2]
+        if len(self.players) < 3:
+            self.players[4] = self.players[3]
+        betting_amount = 0
+        #self.players[1].current_bet
         new_hand = Player(betting_amount, True)
-        new_hand.hand[0] = self.players[1].hand[1]
-        self.players[1].hand.pop(1)
-        self.players[1].hit()
-        self.players[3] = new_hand
+        new_hand.hand[0] = self.players[idx].hand[1]
+        self.players[idx].hand.pop(1)
+        self.players[idx].hit()
+        self.players[idx+1] = new_hand
+        print("got to here")
     
     def deckSize(self): #use this to keep track of how many cards are left in the deck
         if self.card_count <= (0.25 * self.max_deck):
