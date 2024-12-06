@@ -237,19 +237,16 @@ class BlackJack:
         self.printHands(True)
         
     def split(self, idx):
-        print("got to here")
-        if len(self.players) < 2:
+        if len(self.players) > 2:
             self.players[3] = self.players[2]
-        if len(self.players) < 3:
+        if len(self.players) > 3:
             self.players[4] = self.players[3]
-        betting_amount = 0
-        #self.players[1].current_bet
+        betting_amount = self.players[1].current_bet
         new_hand = Player(betting_amount, True)
-        new_hand.hand[0] = self.players[idx].hand[1]
-        self.players[idx].hand.pop(1)
-        self.players[idx].hit()
-        self.players[idx+1] = new_hand
-        print("got to here")
+        split_card = self.players[idx].hand.pop(1)
+        new_hand.addCard(split_card)
+        self.hit(idx)
+        self.players.insert(idx+1, new_hand)
     
     def deckSize(self): #use this to keep track of how many cards are left in the deck
         if self.card_count <= (0.25 * self.max_deck):

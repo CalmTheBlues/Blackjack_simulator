@@ -207,6 +207,7 @@ def playGame(window_size, game, player):
 
         # Display player's cards (assuming a single player for now)
         if split_hands:
+            print("inside split hands if")
             player_cards_split_1 = [game.players[1].hand[i]['images']['png'] for i in range(len(game.players[1].hand))]
             player_cards_split_2 = [game.players[2].hand[i]['images']['png'] for i in range(len(game.players[2].hand))]
             
@@ -254,7 +255,7 @@ def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
     try:
         playGame(window_size, game, player)  # User begins playing the game
     except Exception as e:
-        print(e)
+        print(f"The code stopped running because {e}")
         app.quit()
 
     app.quit()         # Kills the window
