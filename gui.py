@@ -19,7 +19,7 @@ CARD_IMG_FOLDER = './img/cards/'
 
 PLAYER_ZONES = {
     #min x, max x, min y, max y
-    'dealer': (576, 800, 100, 200),
+    'player0': (576, 800, 100, 200),
     'player1': (576, 780, 400, 720),
     'player1split2': (604, 808, 400, 720),
     'player1split1': (350, 554, 400, 720), 
@@ -242,7 +242,6 @@ def playGame(window_size, decks, bots, balance):
                 x,y = pygame.mouse.get_pos()
                 if hit_button.collidepoint(x, y):
                     game.hit(current_player)
-                    print(game.players[idx].hand)
                 elif stand_button.collidepoint(x, y):
                     game.stand(current_player)
                 elif split_button.collidepoint(x, y):
@@ -268,7 +267,7 @@ def playGame(window_size, decks, bots, balance):
         # Display each player's current hand value
         for idx, player in enumerate(game.players[hide_dealer:]): # When dealer is hiding, skip over them and don't show their value
             value = player.getHandValue()
-
+            
             # Create font and grab its size
             value_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 16)
 
@@ -281,7 +280,13 @@ def playGame(window_size, decks, bots, balance):
 
             text_width, text_height = value_text.get_size()
 
-            position = PLAYER_ZONES[f'player{idx+1}'] # We skip over the dealer so add +1 to each idx
+            if not split_hands:
+                position = PLAYER_ZONES[f'player{idx+hide_dealer}'] # If we skip over the dealer, add 1 to each player's idx
+            elif split_hands and idx == 1:
+                position = PLAYER_ZONES[f'player1split1']
+            elif split_hands and idx == 2:
+                position = PLAYER_ZONES[f'player1split2']
+                
             value_position = (
             position[0] * scale_x,  # Adjust position to align with the player's cards
             (position[2] - 30) * scale_y  # Slightly above the cards
@@ -321,8 +326,8 @@ def playGame(window_size, decks, bots, balance):
             button_height,
         )
         split_button = pygame.Rect(
-            stand_button.right + button_spacing,
-            window_size[1] - button_height - 20,
+            hit_button.right + button_spacing,
+            window_size[1] - button_height * 2 - 20 - button_spacing,
             button_width,
             button_height,
         )
@@ -342,15 +347,17 @@ def playGame(window_size, decks, bots, balance):
 
         # Display player's cards (assuming a single player for now)
         if split_hands:
-            #draw over the previous cards that are still on screen
+            #draw over the previous cards and previous value that are still on screen
             pygame.draw.rect(
                 screen,
                 TABLE_COLOR,  # Use the table's background color
                 pygame.Rect(PLAYER_ZONES['player1'][0] * scale_x,
                             PLAYER_ZONES['player1'][2] * scale_x,
-                            (PLAYER_ZONES['player1'][1] - PLAYER_ZONES['player1'][0]) * scale_x,
-                            (PLAYER_ZONES['player1'][3] - PLAYER_ZONES['player1'][2]) * scale_x)
+                            (PLAYER_ZONES['player1'][1] - PLAYER_ZONES['player1'][0]) * scale_x, 150 * scale_x)
             )
+            
+            position[0] * scale_x,  # Adjust position to align with the player's cards
+            (position[2] - 30) * scale_y  # Slightly above the cards
             
             player_cards_split_1 = [game.players[1].hand[i]['images']['png'] for i in range(len(game.players[1].hand))]
             player_cards_split_2 = [game.players[2].hand[i]['images']['png'] for i in range(len(game.players[2].hand))]

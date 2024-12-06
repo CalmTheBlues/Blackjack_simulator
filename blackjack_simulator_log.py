@@ -48,7 +48,7 @@ class Player:
                 num_aces += 1
             else:
                 playerTotal += card_value[card['value']]
-                
+        
         possible_totals = {playerTotal}
         for _ in range(num_aces):
             possible_totals = {total + 1 for total in possible_totals} | {total + 11 for total in possible_totals}
@@ -241,11 +241,11 @@ class BlackJack:
             self.players[3] = self.players[2]
         if len(self.players) > 3:
             self.players[4] = self.players[3]
-        new_hand = Player(self.players[idx].current_bet, True)
+        new_hand = Player(self.players[idx].balance, True)
         split_card = self.players[idx].hand.pop(1)
         new_hand.addCard(split_card)
-        self.hit(idx)
-        self.players.insert(idx+1, new_hand)
+        #self.hit(idx)
+        self.players.insert(idx+2, new_hand)
     
     def deckSize(self): #use this to keep track of how many cards are left in the deck
         if self.card_count <= (0.25 * self.max_deck):
@@ -393,11 +393,12 @@ class BlackJack:
     def isBlackjack(self, idx):
         has_ace = False
         has_ten = False
-        for card in self.players[idx].hand:
-            if card['value'] == 'ACE':
-                has_ace = True
-            if card_value[card['value']] == 10:
-                has_ten = True
+        if len(self.players[idx].hand) == 2:
+            for card in self.players[idx].hand:
+                if card['value'] == 'ACE':
+                    has_ace = True
+                if card_value[card['value']] == 10:
+                    has_ten = True
 
         return has_ace and has_ten
 
