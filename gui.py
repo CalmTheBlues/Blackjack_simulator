@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import *
-from blackjack_simulator import BlackJack, Player
+from blackjack_simulator_log import BlackJack, Player
 import pygame
 from io import BytesIO
 import requests
@@ -19,7 +19,9 @@ card_back = 'https://deckofcardsapi.com/static/img/back.png'
 PLAYER_ZONES = {
     #min x, max x, min y, max y
     'dealer': (576, 800, 100, 200),
-    'player1': (576, 780, 400, 720)
+    'player1': (576, 780, 400, 720),
+    'player2': (100, 225, 300, 400),
+    'player3': (700, 825, 300, 420)
 }
 
 def display_card_image(screen: Surface, card_url: str, base_position: tuple, scale_x: float, scale_y: float, base_size=(128, 128)):
@@ -76,20 +78,26 @@ def display_player_balance(screen, player):
     screen.blit(balance_text, text_position)
 
 
-def playGame(window_size, game, player, decks, bots):
+def playGame(window_size, game, player, decks, bots, balance):
     pygame.init()
 
     #Initial blackjack information
     game = game
-    player = player
 
     # game.players.append(player)
     game.getNewDecks(decks)
-    game.playmates(bots)
+    game.playmates(bots, balance)
     print(game.deck_id)
+    player = game.players[1]
     game.deal_cards()
+    
+    l = len(game.players)
+    player_cards = [
+    [game.players[i].hand[j]['images']['png'] for j in range(len(game.players[i].hand))]
+    for i in range(1, l)]
+    
 
-    player_cards = [player.hand[i]['images']['png'] for i in range(len(player.hand))]
+    
     dealer_cards = [game.players[0].hand[i]['images']['png'] for i in range(len(game.players[0].hand))]
 
     #Initial screen information
@@ -191,7 +199,15 @@ def playGame(window_size, game, player, decks, bots):
             display_player_cards(screen, dealer_cards, PLAYER_ZONES["dealer"], scale_x, scale_y, 1)
 
         # Display player's cards (assuming a single player for now)
-        display_player_cards(screen, player_cards, PLAYER_ZONES["player1"], scale_x, scale_y)
+        for i in range(1, len(player_cards)):  # Enumerate over players
+            base_position = PLAYER_ZONES[f'player{i}']  # Adjust for player indexing
+            display_player_cards(
+                screen,
+                player_cards[i],  # Pass the sublist for the current player
+                base_position,
+                scale_x,
+                scale_y
+            )
 
         # Draw hit button
         pygame.draw.rect(screen, (255, 0, 0), hit_button)
@@ -212,6 +228,7 @@ def playGame(window_size, game, player, decks, bots):
         dealer_cards = [game.players[0].hand[i]['images']['png'] for i in range(len(game.players[0].hand))]
 
         pygame.display.update()
+
 
 
 def validate_input(decks, balance, bots):
@@ -251,9 +268,10 @@ def joinServer(decks, balance, bots, errorLabel, app):
     bots = int(bots)
 
     game = BlackJack(bots)
-    player = Player(balance)
+    player = None
+    # player = Player(balance)
     try:
-        playGame(window_size, game, player, decks, bots)  # User begins playing the game
+        playGame(window_size, game, player, decks, bots, balance)  # User begins playing the game
     except Exception as e:
         print(e)
         app.quit()

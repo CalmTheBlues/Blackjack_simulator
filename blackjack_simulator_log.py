@@ -263,7 +263,6 @@ class BlackJack:
     def playmates(self, numbots, balance):
         self.num_bots = numbots
         #self.player_hands = [[] for _ in range(numbots + 2)]  # empty lists for each hand plus 2 is for  yourself and dealer
-        self.players.append(Player(-1)) #append dealer as special player with balance -1
         self.players.append(Player(balance)) #user
         for _ in range(numbots): # append bots with budget 100
             self.players.append(Player(100))
