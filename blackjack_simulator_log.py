@@ -241,8 +241,7 @@ class BlackJack:
             self.players[3] = self.players[2]
         if len(self.players) > 3:
             self.players[4] = self.players[3]
-        betting_amount = self.players[1].current_bet
-        new_hand = Player(betting_amount, True)
+        new_hand = Player(self.players[idx].current_bet, True)
         split_card = self.players[idx].hand.pop(1)
         new_hand.addCard(split_card)
         self.hit(idx)
