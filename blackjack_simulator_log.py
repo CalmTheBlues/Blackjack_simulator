@@ -35,9 +35,69 @@ class Player:
         self.current_bet = 0
         self.hand = []
         self.winnings = 0
-
+    
     def placeBet(self, bet_amount):
         self.current_bet = bet_amount
+
+    def botPlay(self, players, max_val, min_val): #logic for how a bot will make a move
+        # Decision for hard totals (no Aces or Aces counted as 1)
+        dealer_card = players[0].hand[0]['value']
+        dealer_card = card_value[dealer_card]
+
+        # Decision for soft totals (Ace counted as 11)
+        if 13 <= max_val <= 16:
+            if dealer_card >= 7:
+                return 'hit'
+            else:
+                return 'double down'
+        elif max_val == 17:
+            if dealer_card >= 7:
+                return 'hit'
+            else:
+                return 'double down'
+        elif max_val == 18:
+            if dealer_card <= 8:
+                return 'stand'
+            else:
+                return 'hit'
+        elif max_val == 19:
+            return 'stand'
+        elif max_val == 20:
+            return 'stand'
+        elif max_val == 21:
+            return 'stand'
+        #Decisions for hard total
+        if min_val > 21:
+            return 'stand'
+        if min_val <= 8:
+            return 'hit'
+        elif min_val == 9:
+            if 3 <= dealer_card <= 6:
+                return 'double down'
+            else:
+                return 'hit'
+        elif min_val == 10:
+            if dealer_card <= 9:
+                return 'double down'
+            else:
+                return 'hit'
+        elif min_val == 11:
+            return 'double down'
+        elif min_val == 12:
+            if 4 <= dealer_card <= 6:
+                return 'stand'
+            else:
+                return 'hit'
+        elif 13 <= min_val <= 16:
+            if 2 <= dealer_card <= 6:
+                return 'stand'
+            else:
+                return 'hit'
+        elif min_val >= 17:
+            return 'stand'
+
+        # Default to hit if no specific strategy matches
+        return 'hit'
 
     def getHandValue(self) -> int:
         playerTotal = 0
@@ -74,16 +134,17 @@ class Player:
         self.hand = []
 
 class BlackJack: 
-    def __init__(self):
+    def __init__(self, bots):
         self.deck_url = None
         self.deck = None
         self.deck_id = None
         self.num_chips = 0
         self.wager = None
         self.players: list[Player] = [Player(-1)]
-        self.num_bots = 0
+        self.num_bots = bots
         self.card_count = None
         self.max_deck = None
+        self.count = 0
         self.game_log = []  # New feature for logging games
         self.hand_log = []  # Log for individual hands within a game
         self.round_active = True  # New attribute to track if the round is active
@@ -199,9 +260,11 @@ class BlackJack:
             except ValueError:
                 print(f"Invalid input. Please enter an integer between 0 and {available_balance}")
 
-    def playmates(self, numbots):
+    def playmates(self, numbots, balance):
         self.num_bots = numbots
-        #self.players.append(Player(-1)) #append dealer as special player with balance -1
+        #self.player_hands = [[] for _ in range(numbots + 2)]  # empty lists for each hand plus 2 is for  yourself and dealer
+        self.players.append(Player(-1)) #append dealer as special player with balance -1
+        self.players.append(Player(balance)) #user
         for _ in range(numbots): # append bots with budget 100
             self.players.append(Player(100))
 
@@ -213,7 +276,20 @@ class BlackJack:
                 drawn_card = card.json()["cards"][0]  # get the first card from the response
                 self.players[j].hand.append(drawn_card)  # append the card to the player's hand
                 self.card_count -= 1
+                if j == 1 and i == 1: #don't include dealer's unseen card
+                    continue
+                self.cardVal(drawn_card)
         self.current_player_idx = 1
+    
+    def cardVal(self, card):
+        val = card_value[card['value']]
+        print(val)
+        if val >= 10:
+            self.count -= 1
+        elif 7 <= val <=9:
+            self.count += 0
+        elif val <= 6:
+            self.count += 1
                 
     def hit(self, idx):
         draw_url = f"https://deckofcardsapi.com/api/deck/{self.deck_id}/draw/?count={1}"
@@ -221,6 +297,7 @@ class BlackJack:
         drawn_card = card.json()["cards"][0]
         self.players[idx].hand.append(drawn_card)
         self.card_count -= 1
+        self.cardVal(drawn_card)
         
     def stand(self, idx):
         if self.current_player_idx == len(self.players) - 1:
@@ -237,9 +314,10 @@ class BlackJack:
     def split(self):
         pass
     
-    def deckSize(self): #use this to keep track of how many cards are left in the deck
+    def deckSize(self, num_decks): #use this to keep track of how many cards are left in the deck
         if self.card_count <= (0.25 * self.max_deck):
-            print("time to reshuffle") 
+            self.getNewDecks(num_decks)
+            self.count = 0 
 
     def printHands(self, hide_dealers):
         for idx, player in enumerate(self.players):
@@ -354,6 +432,17 @@ class BlackJack:
             return values[0]
         elif len(values) > 1:
             return max(values)
+    def getMinScoreFromHand(self, idx):
+        values = self.players[idx].getHandValue()
+        if len(values) == 1:
+            return values[0]
+        elif len(values) > 1:
+            return min(values)
+        
+    def resetPlayerHands(self):
+        l = len(self.players)
+        for i in range(l):
+            self.players[i].resetHand()
         
 
     def end_game(self, result):
