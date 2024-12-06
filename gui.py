@@ -17,12 +17,13 @@ card_back = 'https://deckofcardsapi.com/static/img/back.png'
 
 
 PLAYER_ZONES = {
-    #min x, max x, min y, max y
-    'dealer': (576, 800, 100, 200),
-    'player1': (576, 780, 400, 720),
-    'player2': (100, 225, 300, 400),
-    'player3': (700, 825, 300, 420)
+    # Format: (min x, max x, min y, max y)
+    'dealer': (540, 740, 50, 150),    # Centered at the top for the dealer
+    'player1': (540, 740, 520, 620),  # Centered at the bottom for player 1
+    'player2': (100, 300, 300, 400),  # Left side for player 2
+    'player3': (980, 1180, 300, 400)  # Right side for player 3
 }
+
 
 def display_card_image(screen: Surface, card_url: str, base_position: tuple, scale_x: float, scale_y: float, base_size=(128, 128)):
     """
@@ -60,9 +61,11 @@ def display_player_cards(screen, player_cards, base_position, scale_x, scale_y, 
 
     else:
         for i, card_url in enumerate(player_cards):
-            # Calculate the position for each card in the player's hand
-            card_position = (base_position[0] + i * card_offset[0], base_position[2] + i * card_offset[1])
+            print(f"Card URL for player {i}: {card_url}")  # Debugging
+            card_position = (base_position[0] + i * card_offset[0], base_position[1] + i * card_offset[1])
+            print(card_position)
             display_card_image(screen, card_url, card_position, scale_x, scale_y, base_size)
+
 
 def display_player_balance(screen, player):
     balance = player.balance
@@ -137,7 +140,6 @@ def playGame(window_size, game, player, decks, bots, balance):
                 elif stand_button.collidepoint(x, y):
                     game.stand(current_player)
 
-
         for idx, player in enumerate(game.players[1:]):
             value = player.getHandValue()
 
@@ -190,7 +192,7 @@ def playGame(window_size, game, player, decks, bots, balance):
         scale_y = window_size[1] / BASE_HEIGHT
 
         # Display player's balance
-        display_player_balance(screen, player)
+        display_player_balance(screen, game.players[1])
 
         # Display dealer's cards
         if current_player == 0:
@@ -198,16 +200,39 @@ def playGame(window_size, game, player, decks, bots, balance):
         else:
             display_player_cards(screen, dealer_cards, PLAYER_ZONES["dealer"], scale_x, scale_y, 1)
 
-        # Display player's cards (assuming a single player for now)
-        for i in range(1, len(player_cards)):  # Enumerate over players
-            base_position = PLAYER_ZONES[f'player{i}']  # Adjust for player indexing
-            display_player_cards(
-                screen,
-                player_cards[i],  # Pass the sublist for the current player
-                base_position,
-                scale_x,
-                scale_y
-            )
+        for i in range(1, len(game.players)):
+            print(i)
+            if i == 1: # and not game.players[1].isNotBot:
+                print("player 1")
+                print(PLAYER_ZONES["player1"])
+                cards = [game.players[1].hand[i]['images']['png'] for i in range(len(game.players[1].hand))]
+                base_position = PLAYER_ZONES['player1']  # Use correct player zone
+                display_player_cards(screen, cards, base_position, scale_x, scale_y)
+
+            if i == 2: #and not game.players[2].isNotBot:
+                print("player 2")
+                print(PLAYER_ZONES["player2"])
+                bot_cards = [game.players[2].hand[i]['images']['png'] for i in range(len(game.players[2].hand))]
+                base_position = PLAYER_ZONES['player2']  # Use correct player zone
+                display_player_cards(screen, bot_cards, base_position, scale_x, scale_y)
+
+            if i == 3: #and not game.players[3].isNotBot:
+                print("player 3")
+                print(PLAYER_ZONES["player3"])
+                bot_cards = [game.players[3].hand[i]['images']['png'] for i in range(len(game.players[3].hand))]
+                base_position = PLAYER_ZONES['player3']  # Use correct player zone
+                display_player_cards(screen, bot_cards, base_position, scale_x, scale_y)
+        
+        
+        # for i, cards in enumerate(player_cards):  # Loop over player hands
+        #     base_position = PLAYER_ZONES[f'player{i+1}']  # Use correct player zone
+        #     display_player_cards(
+        #     screen,
+        #     cards,  # Pass cards for the current player
+        #     base_position,
+        #     scale_x,
+        #     scale_y
+        #     )
 
         # Draw hit button
         pygame.draw.rect(screen, (255, 0, 0), hit_button)
@@ -224,7 +249,10 @@ def playGame(window_size, game, player, decks, bots, balance):
         screen.blit(stand_text, stand_text_rect)
 
         # UPDATE PLAYER HANDS INFORMATION
-        player_cards = [player.hand[i]['images']['png'] for i in range(len(player.hand))]
+        player_cards = [
+            [game.players[i].hand[j]['images']['png'] for j in range(len(game.players[i].hand))]
+            for i in range(1, l)]
+        # player_cards = [player.hand[i]['images']['png'] for i in range(len(player.hand))]
         dealer_cards = [game.players[0].hand[i]['images']['png'] for i in range(len(game.players[0].hand))]
 
         pygame.display.update()
