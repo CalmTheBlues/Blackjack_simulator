@@ -39,8 +39,10 @@ class Player:
 
     def placeBet(self, bet_amount):
         self.current_bet = bet_amount
+        self.balance = self.balance - self.current_bet
 
-    def getHandValue(self) -> int:
+
+    def getHandValue(self) -> list:
         playerTotal = 0
         num_aces = 0
         for card in self.hand:
@@ -222,6 +224,8 @@ class BlackJack:
         card = requests.get(draw_url)
         drawn_card = card.json()["cards"][0]
         self.players[idx].hand.append(drawn_card)
+        if self.players[idx].getHandValue() == None:
+            self.stand(idx)
         self.card_count -= 1
         
     def stand(self, idx):
@@ -253,15 +257,15 @@ class BlackJack:
 
     def printHands(self, hide_dealers):
         for idx, player in enumerate(self.players):
-            if idx == 0:
+            if idx == 1:
                 player_name = "Player"
-            elif idx == 1:
+            elif idx == 0:
                 player_name = "Dealer"
             else:
                 player_name = f"Bot {idx - 1}"
             
             if idx == 1 and hide_dealers:
-                card_names = [f"{player.hand[0]['value']} of {player.hand[0]['suit']} and UNKNOWN"]
+                card_names = [f"{player.hand[1]['value']} of {player.hand[1]['suit']} and UNKNOWN"]
             else:
                 card_names = [f"{card['value']} of {card['suit']}" for card in player.hand]
             print(f"{player_name}'s hand: {', '.join(card_names)}")
@@ -334,31 +338,33 @@ class BlackJack:
         print(f"Dealer's hand: {', '.join(card_names)}")
 
     def dealerHit(self):
-        if not self.round_active:  # If the round is no longer active, the dealer should not proceed
-            return
 
-        dealer_value = self.players[1].getHandValue()
+        dealer_value = self.players[0].getHandValue()
         if dealer_value is None:  # If dealer hand is empty or busts, do not proceed
             return
+        
+        # Check if all players have busted
+        if all(player.getHandValue() is None for player in self.players[1:]):  # Exclude dealer
+            return  # Exit if every player has busted
 
         print(f"Dealer's value: {dealer_value}")
         self.printHands(False)
 
         # Handle soft 17 case
-        if dealer_value == 17 and any(card['value'] == 'ACE' for card in self.players[1].hand):
-            self.hit(1)
+        if dealer_value == 17 and any(card['value'] == 'ACE' for card in self.players[0].hand):
+            self.hit(0)
             self.printHands(False)
 
-        dealer_value = self.players[1].getHandValue()
-        while dealer_value and max(dealer_value) < 17 and self.round_active:
-            self.hit(1)
+        dealer_value = self.players[0].getHandValue()
+        while dealer_value and max(dealer_value) < 17:
+            self.hit(0)
             self.printHands(False)
-            dealer_value = self.players[1].getHandValue()
+            dealer_value = self.players[0].getHandValue()
             print(f"Dealer's new value: {dealer_value}")
         
     def getMaxScoreFromHand(self, idx):
         values = self.players[idx].getHandValue()
-        if values is None:
+        if values == None:
             return None
         if len(values) == 1:
             return values[0]
@@ -368,7 +374,7 @@ class BlackJack:
 
     def end_game(self, result):
         print(f"Round ended with result: {result}")
-        player_balance = self.players[0].balance
+        player_balance = self.players[1].balance
         self.log_hand(result, player_balance)
         self.log_game()  # Ensure the game log is updated after each game
         self.round_active = False  # Mark the round as inactive
@@ -377,7 +383,7 @@ class BlackJack:
 
         # Check if loss limit is reached after losing a bet
         if result == "Loss" and self.check_loss_limit():
-            exit()
+            print("Under your limit.")
 
     def view_game_log(self):
         # View the game log after each hand if the player wants to
@@ -400,7 +406,39 @@ class BlackJack:
                 if card_value[card['value']] == 10:
                     has_ten = True
 
-        return has_ace and has_ten
+            return has_ace and has_ten
+        
+    def end_round(self):
+        # Determine the outcome
+        player_value = self.getMaxScoreFromHand(1)
+        dealer_value = self.getMaxScoreFromHand(0)
+
+        print(f'dealer_value: {dealer_value}')
+        print(f'player_value: {player_value}')
+
+        if (player_value == None):
+            print(f'Player has lost the hand. Current balance is {self.players[1].balance}')
+            self.end_game("Loss")
+            return "Loss"
+        elif dealer_value is None or dealer_value > 21:
+            print("Dealer has busted. Player wins.")
+            self.players[1].balance += self.players[1].current_bet * 2
+            self.end_game("Win")
+            return "Win"
+        elif player_value > dealer_value:
+            print(f"Player wins with {player_value}")
+            self.players[1].balance += self.players[1].current_bet * 2
+            self.end_game("Win")
+            return "Win"
+        elif player_value == dealer_value:
+            print(f"Push with the dealer. Player's bet is returned.")
+            self.players[1].balance += self.players[1].current_bet
+            self.end_game("Push")
+            return "Push"
+        else:
+            print(f"Player has lost the hand. Current balance is {self.players[1].balance}")
+            self.end_game("Loss")
+            return "Loss"
 
 
 def main():
@@ -457,25 +495,7 @@ def main():
             game.revealDealer()
             game.dealerHit()
 
-            # Determine the outcome
-            player_value = game.getMaxScoreFromHand(0)
-            dealer_value = game.getMaxScoreFromHand(1)
-
-            if dealer_value is None or dealer_value > 21:
-                print("Dealer has busted. Player wins.")
-                game.players[0].balance += game.players[0].current_bet * 2
-                game.end_game("Win")
-            elif player_value > dealer_value:
-                print(f"Player wins with {player_value}")
-                game.players[0].balance += game.players[0].current_bet * 2
-                game.end_game("Win")
-            elif player_value == dealer_value:
-                print(f"Push with the dealer. Player's bet is returned.")
-                game.players[0].balance += game.players[0].current_bet
-                game.end_game("Push")
-            else:
-                print(f"Player has lost the hand. Current balance is {game.players[0].balance}")
-                game.end_game("Loss")
+            game.end_round()
 
         # Reset bet for the next round
         game.players[0].current_bet = 0

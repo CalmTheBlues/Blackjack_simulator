@@ -138,6 +138,13 @@ def display_card_image(screen, card_url, base_position, scale_x, scale_y, base_s
     # Scale position
     scaled_position = (int(base_position[0] * scale_x), int(base_position[1] * scale_y))
 
+    # Clear the previous card by drawing a rectangle over it
+    pygame.draw.rect(
+    screen,
+    TABLE_COLOR,  # Use the table's background color
+    pygame.Rect(scaled_position[0], scaled_position[1], scaled_size[0], scaled_size[1])
+    )
+
     screen.blit(card_img, scaled_position)
 
 
@@ -171,11 +178,93 @@ def display_player_balance(screen, player, scale_x, scale_y):
     pygame.draw.rect(
     screen,
     TABLE_COLOR,  # Use the table's background color
-    pygame.Rect(text_position[0], text_position[1], (text_width*scale_x)+20, (text_height*scale_y)+10))
+    pygame.Rect(text_position[0], text_position[1], (text_width*scale_x)+60, (text_height*scale_y)+10))
 
 
     # Display the balance text on the screen
     screen.blit(balance_text, text_position)
+
+def end_hand(screen, game, scale_x, scale_y):
+    """
+    Handles the dealer's turn, determines the round result,
+    and displays a win/loss message before clearing the board.
+    """
+
+    # Display player's full cards
+    player_cards = [card['images']['png'] for card in game.players[1].hand]
+    display_player_cards(screen, player_cards, PLAYER_ZONES["player1"], scale_x, scale_y, hide_one=0)
+    
+
+    # Dealer hits until their hand value is at least 17
+    game.dealerHit()
+    
+    # Display dealer's full cards
+    dealer_cards = [card['images']['png'] for card in game.players[0].hand]
+    display_player_cards(screen, dealer_cards, PLAYER_ZONES["player0"], scale_x, scale_y, hide_one=0)
+
+    for idx, player in enumerate(game.players): # When dealer is hiding, skip over them and don't show their value
+
+        value = player.getHandValue()
+
+        # Create font and grab its size
+        value_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 16)
+
+        if game.isBlackjack(idx):
+            value_text = value_font.render("Blackjack!", True, (0, 255, 0))
+        elif value:
+            value_text = value_font.render(f"{value}", True, (255, 255, 255))
+        else:
+            value_text = value_font.render(f"Bust!", True, (255, 0, 0))
+
+        text_width, text_height = value_text.get_size()
+
+        position = PLAYER_ZONES[f'player{idx}'] # If we skip over the dealer, add 1 to each player's idx
+
+        # Calculate scaled position of where to place the hand value
+        value_position = (
+        position[0] * scale_x,  # Adjust position to align with the player's cards
+        (position[2] - 30) * scale_y  # Slightly above the cards
+        )
+        
+        # Clear the previous value by drawing a rectangle over it
+        pygame.draw.rect(
+        screen,
+        TABLE_COLOR,  # Use the table's background color
+        pygame.Rect(value_position[0], value_position[1], text_width+30, text_height)
+        )
+
+        # Display the value
+        screen.blit(value_text, value_position)
+
+    # Calculate results and pay winners
+    result = game.end_round()  # Assume `end_round()` returns results like {"player": "win/loss/push"}
+    
+    
+    # Show results
+    result_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 48)
+    if result == "Win":
+        result_text = result_font.render("You Win!", True, (0, 255, 0))
+    elif result == "Loss":
+        result_text = result_font.render("You Lose!", True, (255, 0, 0))
+    else:
+        result_text = result_font.render("Push!", True, (255, 255, 0))
+    
+    # Display result in the center of the screen
+    screen_rect = screen.get_rect()
+    text_rect = result_text.get_rect(center=(screen_rect.width // 2, screen_rect.height // 2 - 40))
+    screen.blit(result_text, text_rect)
+    pygame.display.update()
+    
+    # Pause for 3 seconds before clearing the board
+    pygame.time.delay(3000)
+    
+    # Clear the board for the next round
+    screen.fill(TABLE_COLOR)
+    pygame.display.update()
+    
+    # Reset for the next hand
+    game.current_player_idx = 1
+
 
 
 def playGame(window_size, decks, bots, balance):
@@ -188,7 +277,6 @@ def playGame(window_size, decks, bots, balance):
     game.players.append(player)
     game.getNewDecks(decks)
     print(game.deck_id)
-    #game.deal_cards()
 
     player_cards = [player.hand[i]['images']['png'] for i in range(len(player.hand))]
     dealer_cards = [game.players[0].hand[i]['images']['png'] for i in range(len(game.players[0].hand))]
@@ -215,18 +303,28 @@ def playGame(window_size, decks, bots, balance):
     running = True
     split_hands = False
     while running:
+        
+        # Find scales for window resizing
+        scale_x = window_size[0] / BASE_WIDTH
+        scale_y = window_size[1] / BASE_HEIGHT
+
         # Find the current player
         current_player = game.current_player_idx
+        
+        # Grab new decks if we run out of cards for players
+        if game.card_count <= 4*len(game.players):
+            game.getNewDecks(decks)
 
         # Decide whether or not the dealer should be hiding their card
-        if current_player == 0:
+        if current_player == 0 or game.isBlackjack(1):
             hide_dealer = 0
+            end_hand(screen, game, scale_x, scale_y)
         else:
             hide_dealer = 1
 
-
-        scale_x = window_size[0] / BASE_WIDTH
-        scale_y = window_size[1] / BASE_HEIGHT
+        # UPDATE PLAYER HANDS INFORMATION
+        player_cards = [player.hand[i]['images']['png'] for i in range(len(player.hand))]
+        dealer_cards = [game.players[0].hand[i]['images']['png'] for i in range(len(game.players[0].hand))]
 
 
         for event in pygame.event.get():
@@ -234,8 +332,7 @@ def playGame(window_size, decks, bots, balance):
                 running = False
             elif event.type == pygame.VIDEORESIZE:
                 window_size = event.size
-                pygame.display.set_caption("Blackjack")
-                screen.fill(TABLE_COLOR)
+                #screen.fill(TABLE_COLOR)
                 scale_x = window_size[0] / BASE_WIDTH
                 scale_y = window_size[1] / BASE_HEIGHT
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -266,20 +363,20 @@ def playGame(window_size, decks, bots, balance):
 
         # Display each player's current hand value
         for idx, player in enumerate(game.players[1:]): # When dealer is hiding, skip over them and don't show their value
-            value = player.getHandValue()
-            print(idx)
-            
-            # Create font and grab its size
-            value_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 16)
 
-            if game.isBlackjack(idx):
-                value_text = value_font.render("Blackjack!", True, (0, 255, 0))
-            elif value:
-                value_text = value_font.render(f"{value}", True, (255, 255, 255))
-            else:
-                value_text = value_font.render(f"Bust!", True, (255, 0, 0))
+            if len(player.hand) >= 2:
+                value = player.getHandValue()
+                # Create font and grab its size
+                value_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 16)
 
-            text_width, text_height = value_text.get_size()
+                if game.isBlackjack(idx+1):
+                    value_text = value_font.render("Blackjack!", True, (0, 255, 0))
+                elif value:
+                    value_text = value_font.render(f"{value}", True, (255, 255, 255))
+                else:
+                    value_text = value_font.render(f"Bust!", True, (255, 0, 0))
+
+                text_width, text_height = value_text.get_size()
 
             if not split_hands:
                 position = PLAYER_ZONES[f'player1']
@@ -301,8 +398,6 @@ def playGame(window_size, decks, bots, balance):
             pygame.Rect(value_position[0], value_position[1], text_width + 30, text_height)
             )
 
-            # Display the value
-            screen.blit(value_text, value_position)
 
 
         # Calculate button positions for the bottom-right corner
@@ -312,7 +407,6 @@ def playGame(window_size, decks, bots, balance):
             (button_width*2) - 40,
             button_height
         )
-
         # Calculate button positions for the bottom-left corner
         hit_button = pygame.Rect(
             20,  # Left margin
@@ -336,15 +430,11 @@ def playGame(window_size, decks, bots, balance):
         # Display chips
         display_chips_and_bet(screen, player.current_bet, chip_bets, scale_x, scale_y)
 
-
         # Display player's balance
         display_player_balance(screen, player, scale_x, scale_y)
 
-        # Display dealer's cards
-        if hide_dealer == 0:
-            display_player_cards(screen, dealer_cards, PLAYER_ZONES["player0"], scale_x, scale_y)
-        else:
-            display_player_cards(screen, dealer_cards, PLAYER_ZONES["player0"], scale_x, scale_y, hide_dealer)
+        # Display dealer cards
+        display_player_cards(screen, dealer_cards, PLAYER_ZONES["player0"], scale_x, scale_y, hide_dealer)
 
         # Display player's cards (assuming a single player for now)
         if split_hands:
@@ -372,7 +462,6 @@ def playGame(window_size, decks, bots, balance):
         bet_text_rect = bet_text.get_rect(center=bet_button.center)
         screen.blit(bet_text, bet_text_rect)
 
-
         # Draw hit button
         pygame.draw.rect(screen, (255, 0, 0), hit_button)
         hit_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 32)
@@ -394,10 +483,6 @@ def playGame(window_size, decks, bots, balance):
             split_text = split_font.render("Split", True, (255, 255, 255))
             split_text_rect = split_text.get_rect(center=split_button.center)
             screen.blit(split_text, split_text_rect)
-
-        # UPDATE PLAYER HANDS INFORMATION
-        player_cards = [player.hand[i]['images']['png'] for i in range(len(player.hand))]
-        dealer_cards = [game.players[0].hand[i]['images']['png'] for i in range(len(game.players[0].hand))]
 
         pygame.display.update()
 
