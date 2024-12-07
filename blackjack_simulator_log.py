@@ -411,32 +411,30 @@ class BlackJack:
         
     def end_round(self, isSplit):
         # Determine the outcome
-        print(f'num players: {len(self.players)}')
-        print(f'players: {self.players}')
         player_value = self.getMaxScoreFromHand(1)
         dealer_value = self.getMaxScoreFromHand(0)
-
+        
         if isSplit:
             split_value = self.getMaxScoreFromHand(2)
             if split_value == None:
                 self.end_game("Loss")
                 return "Loss"
             elif dealer_value is None or dealer_value > 21:
-                self.players[1].balance += self.players[2].current_bet * 2
+                self.players[1].balance += self.players[1].current_bet * 2
                 self.end_game("Win")
                 return "Win"
             elif split_value > dealer_value:
-                self.players[1].balance += self.players[2].current_bet * 2
+                self.players[1].balance += self.players[1].current_bet * 2
                 self.end_game("Win")
                 return "Win"
             elif split_value == dealer_value:
-                self.players[1].balance += self.players[2].current_bet
+                self.players[1].balance += self.players[1].current_bet
                 self.end_game("Push")
                 return "Push"
             else:
                 self.end_game("Loss")
                 return "Loss"
-
+            
         print(f'dealer_value: {dealer_value}')
         print(f'player_value: {player_value}')
         

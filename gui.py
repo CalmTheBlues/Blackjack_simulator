@@ -207,7 +207,7 @@ def end_hand(screen, game, scale_x, scale_y):
     """
     split_hands = False
 
-    if len(game.players) >= 2:
+    if len(game.players) > 2:
         split_hands = True
 
 
@@ -356,12 +356,15 @@ def playGame(window_size, decks, bots, balance):
             hide_dealer = 0
             end_hand(screen, game, scale_x, scale_y)
             split_hands = False
+            screen.fill(TABLE_COLOR)
         else:
             hide_dealer = 1
 
         # UPDATE PLAYER HANDS INFORMATION
-        player_cards = [player.hand[i]['images']['png'] for i in range(len(player.hand))]
-        dealer_cards = [game.players[0].hand[i]['images']['png'] for i in range(len(game.players[0].hand))]
+        if (len(player.hand) > 0):
+            player_cards = [player.hand[i]['images']['png'] for i in range(len(player.hand))]
+        if (len(game.players[0].hand) > 0):
+            dealer_cards = [game.players[0].hand[i]['images']['png'] for i in range(len(game.players[0].hand))]
 
         display_running_count(screen, game.running_count, scale_x, scale_y)
 
