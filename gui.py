@@ -301,7 +301,7 @@ def end_hand(screen, game, scale_x, scale_y):
 
 
 
-def playGame(window_size, decks, bots, balance):
+def playGame(window_size, decks, balance):
     pygame.init()
 
     #Initial blackjack information
@@ -501,6 +501,13 @@ def playGame(window_size, decks, bots, balance):
             split_text_rect = split_text.get_rect(center=split_button.center)
             screen.blit(split_text, split_text_rect)
 
+        # Draw double down button
+        pygame.draw.rect(screen, (255, 0, 0), dd_button)
+        dd_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 32)
+        dd_text = dd_font.render("Double Down", True, (255, 255, 255))
+        dd_text_rect = dd_text.get_rect(center=dd_button.center)
+        screen.blit(dd_text, dd_text_rect)
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -518,8 +525,11 @@ def playGame(window_size, decks, bots, balance):
                 elif split_button.collidepoint(x, y):
                     game.split(current_player)
                     split_hands = True
+                elif dd_button.collidepoint(x, y):
+                    game.doubleDown(current_player)
                 elif bet_button.collidepoint(x, y):
                     game.deal_cards()
+                    chip_bets = {value: 0 for value in CHIP_VALUES}
                     split_hands = False
                     player.balance = player.balance - player.current_bet
                     pygame.draw.rect(
@@ -546,7 +556,7 @@ def playGame(window_size, decks, bots, balance):
         pygame.display.update()
 
 
-def validate_input(decks, balance, bots):
+def validate_input(decks, balance):
     error_message = ""
     # Validate Number of Decks (must be an integer between 1 and 6)
     if not decks.isdigit() or not (1 <= int(decks) <= 6):
@@ -560,16 +570,12 @@ def validate_input(decks, balance, bots):
     except ValueError:
         error_message += "Balance must be a valid number.\n"
 
-    # Validate Number of Bots (must be an integer between 0 and 2)
-    if not bots.isdigit() or not (0 <= int(bots) <= 2):
-        error_message += "Number of Bots must be an integer between 0 and 2.\n"
-
     return error_message
 
-def joinServer(decks:str, balance:int, bots:int, errorLabel:tk.Label, app:tk.Tk) -> None:
+def joinServer(decks:str, balance:int, errorLabel:tk.Label, app:tk.Tk) -> None:
 
     # Validate inputs
-    error_message = validate_input(decks, balance, bots)
+    error_message = validate_input(decks, balance)
     if error_message:
         errorLabel.config(text=error_message, fg="red")
         return
@@ -581,10 +587,9 @@ def joinServer(decks:str, balance:int, bots:int, errorLabel:tk.Label, app:tk.Tk)
 
     decks = str(decks)
     balance = int(balance)
-    bots = int(bots)
 
     try:
-        playGame(window_size, decks, bots, balance)  # User begins playing the game
+        playGame(window_size, decks, balance)  # User begins playing the game
     except Exception as e:
         print(f"The code stopped running because {e}")
         app.quit()
@@ -616,16 +621,10 @@ def startScreen():
     moneyEntry = tk.Entry(app)
     moneyEntry.grid(column=1, row=2)
 
-    botLabel = tk.Label(text="Number of Bots (0-2):")
-    botLabel.grid(column=0, row=3, sticky="W", padx=8)
-
-    botEntry = tk.Entry(app)
-    botEntry.grid(column=1, row=3)
-
     errorLabel = tk.Label(text="")
     errorLabel.grid(column=0, row=4, columnspan=2)
 
-    joinButton = tk.Button(text="Join", command=lambda: joinServer(deckEntry.get(), moneyEntry.get(), botEntry.get(), errorLabel, app))
+    joinButton = tk.Button(text="Join", command=lambda: joinServer(deckEntry.get(), moneyEntry.get(), errorLabel, app))
     joinButton.grid(column=0, row=5, columnspan=2)
 
     app.mainloop()
