@@ -265,8 +265,9 @@ def playGame(window_size, decks, bots, balance):
                             print(f"Removed {CHIP_VALUES[i]}, Total Bet: ${player.current_bet}")
 
         # Display each player's current hand value
-        for idx, player in enumerate(game.players[hide_dealer:]): # When dealer is hiding, skip over them and don't show their value
+        for idx, player in enumerate(game.players[1:]): # When dealer is hiding, skip over them and don't show their value
             value = player.getHandValue()
+            print(idx)
             
             # Create font and grab its size
             value_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 16)
@@ -281,11 +282,11 @@ def playGame(window_size, decks, bots, balance):
             text_width, text_height = value_text.get_size()
 
             if not split_hands:
-                position = PLAYER_ZONES[f'player{idx+hide_dealer}'] # If we skip over the dealer, add 1 to each player's idx
-            elif split_hands and idx == 1:
+                position = PLAYER_ZONES[f'player1']
+            elif split_hands and idx == 0:
                 position = PLAYER_ZONES[f'player1split1']
-            elif split_hands and idx == 2:
-                position = PLAYER_ZONES[f'player1split2']
+            elif split_hands and idx == 1:
+                position = PLAYER_ZONES[f'player1']
                 
             value_position = (
             position[0] * scale_x,  # Adjust position to align with the player's cards
@@ -297,7 +298,7 @@ def playGame(window_size, decks, bots, balance):
             pygame.draw.rect(
             screen,
             TABLE_COLOR,  # Use the table's background color
-            pygame.Rect(value_position[0], value_position[1], text_width, text_height)
+            pygame.Rect(value_position[0], value_position[1], text_width + 30, text_height)
             )
 
             # Display the value
@@ -350,20 +351,17 @@ def playGame(window_size, decks, bots, balance):
             #draw over the previous cards and previous value that are still on screen
             pygame.draw.rect(
                 screen,
-                TABLE_COLOR,  # Use the table's background color
+                pygame.color.Color(255, 0, 0),  # Use the table's background color
                 pygame.Rect(PLAYER_ZONES['player1'][0] * scale_x,
                             PLAYER_ZONES['player1'][2] * scale_x,
                             (PLAYER_ZONES['player1'][1] - PLAYER_ZONES['player1'][0]) * scale_x, 150 * scale_x)
             )
             
-            position[0] * scale_x,  # Adjust position to align with the player's cards
-            (position[2] - 30) * scale_y  # Slightly above the cards
-            
             player_cards_split_1 = [game.players[1].hand[i]['images']['png'] for i in range(len(game.players[1].hand))]
             player_cards_split_2 = [game.players[2].hand[i]['images']['png'] for i in range(len(game.players[2].hand))]
             
-            display_player_cards(screen, player_cards_split_1, PLAYER_ZONES["player1split2"], scale_x, scale_y)
-            display_player_cards(screen, player_cards_split_2, PLAYER_ZONES["player1split1"], scale_x, scale_y)
+            display_player_cards(screen, player_cards_split_1, PLAYER_ZONES["player1split1"], scale_x, scale_y)
+            display_player_cards(screen, player_cards_split_2, PLAYER_ZONES["player1split2"], scale_x, scale_y)
         else:
             display_player_cards(screen, player_cards, PLAYER_ZONES["player1"], scale_x, scale_y)
         
