@@ -91,6 +91,7 @@ class BlackJack:
         self.round_active = True  # New attribute to track if the round is active
         self.loss_limit = None  # Loss limit for responsible gambling
         self.current_player_idx = 1
+        self.running_count = 0
 
     def set_loss_limit(self):
         while True:
@@ -209,11 +210,15 @@ class BlackJack:
     def deal_cards(self):
         draw_url = f"https://deckofcardsapi.com/api/deck/{self.deck_id}/draw/?count={1}"
         card = requests.get(draw_url)
-        drawn_card = card.json()["cards"][0]  # get the first card from the response
         for i in range(2): #will go through twice to deal two cards to each player
             for j in range(self.num_bots + 2): #you are at index 0, dealer is 1 bots take up the rest
-                
+                drawn_card = card.json()["cards"][0]  # get the first card from the response
                 self.players[j].hand.append(drawn_card)  # append the card to the player's hand
+                if j == 0 and len(self.players[j].hand) > 1:
+                    if card_value[drawn_card['value']] == '1' or card_value[drawn_card['value']] > 9:
+                        self.running_count -= 1
+                    elif card_value[drawn_card['value']] < 7:
+                        self.running_count += 1
                 self.card_count -= 1
         self.current_player_idx = 1
                 

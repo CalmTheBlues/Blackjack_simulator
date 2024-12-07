@@ -183,6 +183,22 @@ def display_player_balance(screen, player, scale_x, scale_y):
 
     # Display the balance text on the screen
     screen.blit(balance_text, text_position)
+    
+def display_running_count(screen, count, scale_x, scale_y):
+    count_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 24)
+    count_text = count_font.render(f"Running Count: {count}", True, (255, 255, 255))
+    text_width, text_height = count_text.get_size()
+    
+    screen_rect = screen.get_rect()
+    
+    rect_width = (text_width * scale_x) + 60
+    rect_height = (text_height * scale_y) + 10
+    
+    text_position = (screen_rect.width - rect_width + 30, 5)
+    
+    pygame.draw.rect(screen, TABLE_COLOR, pygame.Rect(text_position[0]-30, text_position[1]-5, rect_width, rect_height))
+    
+    screen.blit(count_text, text_position)
 
 def end_hand(screen, game, scale_x, scale_y):
     """
@@ -347,6 +363,7 @@ def playGame(window_size, decks, bots, balance):
         player_cards = [player.hand[i]['images']['png'] for i in range(len(player.hand))]
         dealer_cards = [game.players[0].hand[i]['images']['png'] for i in range(len(game.players[0].hand))]
 
+        display_running_count(screen, game.running_count, scale_x, scale_y)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
