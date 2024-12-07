@@ -29,12 +29,13 @@ card_value = {
 }
 
 class Player:
-    def __init__(self, budget):
+    def __init__(self, budget, canMakeDecision):
         self.original_balance = budget  # Store the original balance
         self.balance = budget
         self.current_bet = 0
         self.hand = []
         self.winnings = 0
+        self.isNotBot = canMakeDecision
 
     def placeBet(self, bet_amount):
         self.current_bet = bet_amount
@@ -49,7 +50,7 @@ class Player:
                 num_aces += 1
             else:
                 playerTotal += card_value[card['value']]
-                
+        
         possible_totals = {playerTotal}
         for _ in range(num_aces):
             possible_totals = {total + 1 for total in possible_totals} | {total + 11 for total in possible_totals}
@@ -82,7 +83,7 @@ class BlackJack:
         self.deck_id = None
         self.num_chips = 0
         self.wager = None
-        self.players: list[Player] = [Player(-1)]
+        self.players: list[Player] = [Player(-1, False)]
         self.num_bots = 0
         self.card_count = None
         self.max_deck = None
@@ -209,10 +210,11 @@ class BlackJack:
 
     def deal_cards(self):
         draw_url = f"https://deckofcardsapi.com/api/deck/{self.deck_id}/draw/?count={1}"
+        card = requests.get(draw_url)
+        drawn_card = card.json()["cards"][0]  # get the first card from the response
         for i in range(2): #will go through twice to deal two cards to each player
             for j in range(self.num_bots + 2): #you are at index 0, dealer is 1 bots take up the rest
-                card = requests.get(draw_url)
-                drawn_card = card.json()["cards"][0]  # get the first card from the response
+                
                 self.players[j].hand.append(drawn_card)  # append the card to the player's hand
                 self.card_count -= 1
         self.current_player_idx = 1
@@ -238,8 +240,16 @@ class BlackJack:
         self.stand(idx)
         self.printHands(True)
         
-    def split(self):
-        pass
+    def split(self, idx):
+        if len(self.players) > 2:
+            self.players[3] = self.players[2]
+        if len(self.players) > 3:
+            self.players[4] = self.players[3]
+        new_hand = Player(self.players[idx].balance, True)
+        split_card = self.players[idx].hand.pop(1)
+        new_hand.addCard(split_card)
+        #self.hit(idx)
+        self.players.insert(idx+2, new_hand)
     
     def deckSize(self): #use this to keep track of how many cards are left in the deck
         if self.card_count <= (0.25 * self.max_deck):
@@ -318,7 +328,7 @@ class BlackJack:
                 self.end_game("Loss")
                 return 2  # Signal that the player has busted and round must end
             return 3
-        elif move == 4:  # split (if applicable)
+        elif move == 4 and can_split:  # split (if applicable)
             self.split()
             return 4
 

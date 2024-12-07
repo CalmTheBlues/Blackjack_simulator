@@ -19,8 +19,10 @@ CARD_IMG_FOLDER = './img/cards/'
 
 PLAYER_ZONES = {
     #min x, max x, min y, max y
-    'player0': (576, 800, 100, 200), #dealer
-    'player1': (576, 780, 400, 720)
+    'player0': (576, 800, 100, 200),
+    'player1': (576, 780, 400, 720),
+    'player1split2': (604, 808, 400, 720),
+    'player1split1': (350, 554, 400, 720), 
 }
 
 CHIP_VALUES = [1, 5, 25, 100]
@@ -270,7 +272,7 @@ def playGame(window_size, decks, bots, balance):
 
     #Initial blackjack information
     game = BlackJack()
-    player = Player(balance)
+    player = Player(balance, True)
 
     game.players.append(player)
     game.getNewDecks(decks)
@@ -278,6 +280,9 @@ def playGame(window_size, decks, bots, balance):
 
     player_cards = [player.hand[i]['images']['png'] for i in range(len(player.hand))]
     dealer_cards = [game.players[0].hand[i]['images']['png'] for i in range(len(game.players[0].hand))]
+    
+    player_cards_split_1 = []
+    player_cards_split_2 = []
 
     #Initial screen information
     screen = pygame.display.set_mode(window_size, pygame.RESIZABLE)
@@ -296,6 +301,7 @@ def playGame(window_size, decks, bots, balance):
     button_spacing = 20  # Space between buttons
 
     running = True
+    split_hands = False
     while running:
         
         # Find scales for window resizing
@@ -335,6 +341,9 @@ def playGame(window_size, decks, bots, balance):
                     game.hit(current_player)
                 elif stand_button.collidepoint(x, y):
                     game.stand(current_player)
+                elif split_button.collidepoint(x, y):
+                    game.split(current_player)
+                    split_hands = True
                 elif bet_button.collidepoint(x, y):
                     game.deal_cards()
                     player.balance = player.balance - player.current_bet
@@ -357,7 +366,6 @@ def playGame(window_size, decks, bots, balance):
 
             if len(player.hand) >= 2:
                 value = player.getHandValue()
-
                 # Create font and grab its size
                 value_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 16)
 
@@ -370,23 +378,25 @@ def playGame(window_size, decks, bots, balance):
 
                 text_width, text_height = value_text.get_size()
 
-                position = PLAYER_ZONES[f'player{idx+1}'] #  We skip over the dealer, so add 1 to each player's idx
-
-                # Calculate scaled position of where to place the hand value
-                value_position = (
-                position[0] * scale_x,  # Adjust position to align with the player's cards
-                (position[2] - 30) * scale_y  # Slightly above the cards
-                )
+            if not split_hands:
+                position = PLAYER_ZONES[f'player1']
+            elif split_hands and idx == 0:
+                position = PLAYER_ZONES[f'player1split1']
+            elif split_hands and idx == 1:
+                position = PLAYER_ZONES[f'player1']
                 
-                # Clear the previous value by drawing a rectangle over it
-                pygame.draw.rect(
-                screen,
-                TABLE_COLOR,  # Use the table's background color
-                pygame.Rect(value_position[0], value_position[1], text_width+30, text_height)
-                )
+            value_position = (
+            position[0] * scale_x,  # Adjust position to align with the player's cards
+            (position[2] - 30) * scale_y  # Slightly above the cards
+            )
+            
 
-                # Display the value
-                screen.blit(value_text, value_position)
+            # Clear the previous value by drawing a rectangle over it
+            pygame.draw.rect(
+            screen,
+            TABLE_COLOR,  # Use the table's background color
+            pygame.Rect(value_position[0], value_position[1], text_width + 30, text_height)
+            )
 
 
 
@@ -410,6 +420,12 @@ def playGame(window_size, decks, bots, balance):
             button_width,
             button_height,
         )
+        split_button = pygame.Rect(
+            hit_button.right + button_spacing,
+            window_size[1] - button_height * 2 - 20 - button_spacing,
+            button_width,
+            button_height,
+        )
 
         # Display chips
         display_chips_and_bet(screen, player.current_bet, chip_bets, scale_x, scale_y)
@@ -421,9 +437,25 @@ def playGame(window_size, decks, bots, balance):
         display_player_cards(screen, dealer_cards, PLAYER_ZONES["player0"], scale_x, scale_y, hide_dealer)
 
         # Display player's cards (assuming a single player for now)
-        display_player_cards(screen, player_cards, PLAYER_ZONES["player1"], scale_x, scale_y)
-
-        # Draw place bet button
+        if split_hands:
+            #draw over the previous cards and previous value that are still on screen
+            pygame.draw.rect(
+                screen,
+                pygame.color.Color(255, 0, 0),  # Use the table's background color
+                pygame.Rect(PLAYER_ZONES['player1'][0] * scale_x,
+                            PLAYER_ZONES['player1'][2] * scale_x,
+                            (PLAYER_ZONES['player1'][1] - PLAYER_ZONES['player1'][0]) * scale_x, 150 * scale_x)
+            )
+            
+            player_cards_split_1 = [game.players[1].hand[i]['images']['png'] for i in range(len(game.players[1].hand))]
+            player_cards_split_2 = [game.players[2].hand[i]['images']['png'] for i in range(len(game.players[2].hand))]
+            
+            display_player_cards(screen, player_cards_split_1, PLAYER_ZONES["player1split1"], scale_x, scale_y)
+            display_player_cards(screen, player_cards_split_2, PLAYER_ZONES["player1split2"], scale_x, scale_y)
+        else:
+            display_player_cards(screen, player_cards, PLAYER_ZONES["player1"], scale_x, scale_y)
+        
+        # Draw Place Bet button
         pygame.draw.rect(screen, (255, 0, 0), bet_button)
         bet_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 32)
         bet_text = bet_font.render("Place Bet", True, (255, 255, 255))
@@ -443,6 +475,14 @@ def playGame(window_size, decks, bots, balance):
         stand_text = stand_font.render("Stand", True, (255, 255, 255))
         stand_text_rect = stand_text.get_rect(center=stand_button.center)
         screen.blit(stand_text, stand_text_rect)
+        
+        # Draw split button
+        if (player.isNotBot and len(player.hand) == 2 and player.hand[0]['value'] == player.hand[1]['value']):
+            pygame.draw.rect(screen, (255, 0, 0), split_button)
+            split_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 32)
+            split_text = split_font.render("Split", True, (255, 255, 255))
+            split_text_rect = split_text.get_rect(center=split_button.center)
+            screen.blit(split_text, split_text_rect)
 
         pygame.display.update()
 
@@ -487,7 +527,7 @@ def joinServer(decks:str, balance:int, bots:int, errorLabel:tk.Label, app:tk.Tk)
     try:
         playGame(window_size, decks, bots, balance)  # User begins playing the game
     except Exception as e:
-        print(e)
+        print(f"The code stopped running because {e}")
         app.quit()
 
     app.quit()         # Kills the window
