@@ -249,7 +249,7 @@ class BlackJack:
         new_hand.current_bet = self.players[idx].current_bet
         split_card = self.players[idx].hand.pop(1)
         new_hand.addCard(split_card)
-        self.players.insert(idx, new_hand)
+        self.players.insert(idx+1, new_hand)
 
     
     def deckSize(self): #use this to keep track of how many cards are left in the deck

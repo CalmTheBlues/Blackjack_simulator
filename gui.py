@@ -291,16 +291,12 @@ def end_hand(screen, game, scale_x, scale_y):
     pygame.display.update()
     
     # Reset for the next hand
-    print('working')
     game.current_player_idx = 1
     player.current_bet = 0
 
     print(f'players before: {len(game.players)}')
     if split_hands:
         del game.players[2]
-    print(f'players after: {len(game.players)}')
-
-    print('still working')
 
 
 
@@ -354,7 +350,7 @@ def playGame(window_size, decks, bots, balance):
             game.getNewDecks(decks)
 
         # Decide whether or not the dealer should be hiding their card
-        if current_player == 0 or game.isBlackjack(1):
+        if current_player == 0:
             hide_dealer = 0
             end_hand(screen, game, scale_x, scale_y)
             split_hands = False
@@ -370,43 +366,7 @@ def playGame(window_size, decks, bots, balance):
 
         display_running_count(screen, game.running_count, scale_x, scale_y)
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.VIDEORESIZE:
-                window_size = event.size
-                #screen.fill(TABLE_COLOR)
-                scale_x = window_size[0] / BASE_WIDTH
-                scale_y = window_size[1] / BASE_HEIGHT
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                x,y = pygame.mouse.get_pos()
-                if hit_button.collidepoint(x, y):
-                    game.hit(current_player)
-                elif stand_button.collidepoint(x, y):
-                    game.stand(current_player)
-                elif split_button.collidepoint(x, y):
-                    game.split(current_player)
-                    split_hands = True
-                elif dd_button.collidepoint(x, y):
-                    game.doubleDown(current_player)
-                elif bet_button.collidepoint(x, y):
-                    game.deal_cards()
-                    chip_bets = {value: 0 for value in CHIP_VALUES}
-                    split_hands = False
-                    player.balance = player.balance - player.current_bet
-                for i, zones in enumerate(CHIP_BUTTON_ZONES):
-                    # Check for + button click
-                    if zones["+"][0]*scale_x <= x <= (zones["+"][0] + zones["+"][2])*scale_x and zones["+"][1]*scale_y <= y <= (zones["+"][1] + zones["+"][3])*scale_y:
-                        player.current_bet += CHIP_VALUES[i]
-                        chip_bets[CHIP_VALUES[i]] += 1
-                        print(f"Added {CHIP_VALUES[i]}, Total Bet: ${player.current_bet}")
-
-                    # Check for - button click
-                    elif zones["-"][0]*scale_x <= x <= (zones["-"][0] + zones["-"][2])*scale_x and zones["-"][1]*scale_y <= y <= (zones["-"][1] + zones["-"][3])*scale_y:
-                        if chip_bets[CHIP_VALUES[i]] > 0:  # Ensure chip count doesn't go negative
-                            player.current_bet -= CHIP_VALUES[i]
-                            chip_bets[CHIP_VALUES[i]] -= 1
-                            print(f"Removed {CHIP_VALUES[i]}, Total Bet: ${player.current_bet}")
+        
 
         # Display each player's current hand value
         for idx, player in enumerate(game.players[1:]): # When dealer is hiding, skip over them and don't show their value
@@ -498,7 +458,7 @@ def playGame(window_size, decks, bots, balance):
             #draw over the previous cards and previous value that are still on screen
             pygame.draw.rect(
                 screen,
-                pygame.color.Color(255, 0, 0),  # Use the table's background color
+                TABLE_COLOR,  # Use the table's background color
                 pygame.Rect(PLAYER_ZONES['player1'][0] * scale_x,
                             PLAYER_ZONES['player1'][2] * scale_x,
                             (PLAYER_ZONES['player1'][1] - PLAYER_ZONES['player1'][0]) * scale_x, 150 * scale_x)
@@ -541,12 +501,47 @@ def playGame(window_size, decks, bots, balance):
             split_text_rect = split_text.get_rect(center=split_button.center)
             screen.blit(split_text, split_text_rect)
 
-        # Draw double down button
-        pygame.draw.rect(screen, (255, 0, 0), dd_button)
-        dd_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 32)
-        dd_text = dd_font.render("Double Down", True, (255, 255, 255))
-        dd_text_rect = dd_text.get_rect(center=dd_button.center)
-        screen.blit(dd_text, dd_text_rect)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.VIDEORESIZE:
+                window_size = event.size
+                #screen.fill(TABLE_COLOR)
+                scale_x = window_size[0] / BASE_WIDTH
+                scale_y = window_size[1] / BASE_HEIGHT
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                x,y = pygame.mouse.get_pos()
+                if hit_button.collidepoint(x, y):
+                    game.hit(current_player)
+                elif stand_button.collidepoint(x, y):
+                    game.stand(current_player)
+                elif split_button.collidepoint(x, y):
+                    game.split(current_player)
+                    split_hands = True
+                elif bet_button.collidepoint(x, y):
+                    game.deal_cards()
+                    split_hands = False
+                    player.balance = player.balance - player.current_bet
+                    pygame.draw.rect(
+                        screen,
+                        TABLE_COLOR,  # Use the table's background color
+                        pygame.Rect(PLAYER_ZONES['player1'][0] * scale_x,
+                            PLAYER_ZONES['player1'][2] * scale_y,
+                            (PLAYER_ZONES['player1'][1] - PLAYER_ZONES['player1'][0]) + 50 * scale_x, 250 * scale_y)
+            )
+                for i, zones in enumerate(CHIP_BUTTON_ZONES):
+                    # Check for + button click
+                    if zones["+"][0]*scale_x <= x <= (zones["+"][0] + zones["+"][2])*scale_x and zones["+"][1]*scale_y <= y <= (zones["+"][1] + zones["+"][3])*scale_y:
+                        player.current_bet += CHIP_VALUES[i]
+                        chip_bets[CHIP_VALUES[i]] += 1
+                        print(f"Added {CHIP_VALUES[i]}, Total Bet: ${player.current_bet}")
+
+                    # Check for - button click
+                    elif zones["-"][0]*scale_x <= x <= (zones["-"][0] + zones["-"][2])*scale_x and zones["-"][1]*scale_y <= y <= (zones["-"][1] + zones["-"][3])*scale_y:
+                        if chip_bets[CHIP_VALUES[i]] > 0:  # Ensure chip count doesn't go negative
+                            player.current_bet -= CHIP_VALUES[i]
+                            chip_bets[CHIP_VALUES[i]] -= 1
+                            print(f"Removed {CHIP_VALUES[i]}, Total Bet: ${player.current_bet}")
 
         pygame.display.update()
 
