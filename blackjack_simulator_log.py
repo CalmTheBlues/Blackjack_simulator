@@ -209,9 +209,9 @@ class BlackJack:
 
     def deal_cards(self):
         draw_url = f"https://deckofcardsapi.com/api/deck/{self.deck_id}/draw/?count={1}"
-        card = requests.get(draw_url)
         for i in range(2): #will go through twice to deal two cards to each player
             for j in range(self.num_bots + 2): #you are at index 0, dealer is 1 bots take up the rest
+                card = requests.get(draw_url)
                 drawn_card = card.json()["cards"][0]  # get the first card from the response
                 self.players[j].hand.append(drawn_card)  # append the card to the player's hand
                 if j == 0 and len(self.players[j].hand) > 1:
