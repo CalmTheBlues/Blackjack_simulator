@@ -246,6 +246,7 @@ class BlackJack:
     def split(self, idx):
         new_hand = Player(self.players[idx].balance)
         self.players[idx].balance -= self.players[idx].current_bet
+        new_hand.current_bet = self.players[idx].current_bet
         split_card = self.players[idx].hand.pop(1)
         new_hand.addCard(split_card)
         self.players.insert(idx, new_hand)

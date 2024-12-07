@@ -293,6 +293,8 @@ def end_hand(screen, game, scale_x, scale_y):
     # Reset for the next hand
     print('working')
     game.current_player_idx = 1
+    player.current_bet = 0
+
     print(f'players before: {len(game.players)}')
     if split_hands:
         del game.players[2]
@@ -385,8 +387,11 @@ def playGame(window_size, decks, bots, balance):
                 elif split_button.collidepoint(x, y):
                     game.split(current_player)
                     split_hands = True
+                elif dd_button.collidepoint(x, y):
+                    game.doubleDown(current_player)
                 elif bet_button.collidepoint(x, y):
                     game.deal_cards()
+                    chip_bets = {value: 0 for value in CHIP_VALUES}
                     split_hands = False
                     player.balance = player.balance - player.current_bet
                 for i, zones in enumerate(CHIP_BUTTON_ZONES):
@@ -472,6 +477,12 @@ def playGame(window_size, decks, bots, balance):
             button_width,
             button_height,
         )
+        dd_button = pygame.Rect(
+        20,
+        window_size[1] - button_height * 2 - 20 - button_spacing,
+        button_width,
+        button_height,
+        )
 
         # Display chips
         display_chips_and_bet(screen, player.current_bet, chip_bets, scale_x, scale_y)
@@ -529,6 +540,13 @@ def playGame(window_size, decks, bots, balance):
             split_text = split_font.render("Split", True, (255, 255, 255))
             split_text_rect = split_text.get_rect(center=split_button.center)
             screen.blit(split_text, split_text_rect)
+
+        # Draw double down button
+        pygame.draw.rect(screen, (255, 0, 0), dd_button)
+        dd_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 32)
+        dd_text = dd_font.render("Double Down", True, (255, 255, 255))
+        dd_text_rect = dd_text.get_rect(center=dd_button.center)
+        screen.blit(dd_text, dd_text_rect)
 
         pygame.display.update()
 
