@@ -189,6 +189,11 @@ def end_hand(screen, game, scale_x, scale_y):
     Handles the dealer's turn, determines the round result,
     and displays a win/loss message before clearing the board.
     """
+    split_hands = False
+
+    if len(game.players) >= 2:
+        split_hands = True
+
 
     # Display player's full cards
     player_cards = [card['images']['png'] for card in game.players[1].hand]
@@ -218,7 +223,15 @@ def end_hand(screen, game, scale_x, scale_y):
 
         text_width, text_height = value_text.get_size()
 
-        position = PLAYER_ZONES[f'player{idx}'] # If we skip over the dealer, add 1 to each player's idx
+        if not split_hands:
+            position = PLAYER_ZONES[f'player{idx}'] # If we don't split hands, positions are simple
+        elif split_hands and idx == 0:
+            position = PLAYER_ZONES['player0']
+        elif split_hands and idx == 1:
+            position = PLAYER_ZONES['player1split1']
+        elif split_hands and idx == 2:
+            position = PLAYER_ZONES['player1']
+
 
         # Calculate scaled position of where to place the hand value
         value_position = (
@@ -237,8 +250,7 @@ def end_hand(screen, game, scale_x, scale_y):
         screen.blit(value_text, value_position)
 
     # Calculate results and pay winners
-    result = game.end_round()  # Assume `end_round()` returns results like {"player": "win/loss/push"}
-    
+    result = game.end_round(split_hands)
     
     # Show results
     result_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 48)
@@ -263,7 +275,15 @@ def end_hand(screen, game, scale_x, scale_y):
     pygame.display.update()
     
     # Reset for the next hand
+    print('working')
     game.current_player_idx = 1
+    print(f'players before: {len(game.players)}')
+    if split_hands:
+        del game.players[2]
+    print(f'players after: {len(game.players)}')
+
+    print('still working')
+
 
 
 
@@ -272,7 +292,7 @@ def playGame(window_size, decks, bots, balance):
 
     #Initial blackjack information
     game = BlackJack()
-    player = Player(balance, True)
+    player = Player(balance)
 
     game.players.append(player)
     game.getNewDecks(decks)
@@ -302,8 +322,8 @@ def playGame(window_size, decks, bots, balance):
 
     running = True
     split_hands = False
+
     while running:
-        
         # Find scales for window resizing
         scale_x = window_size[0] / BASE_WIDTH
         scale_y = window_size[1] / BASE_HEIGHT
@@ -319,6 +339,7 @@ def playGame(window_size, decks, bots, balance):
         if current_player == 0 or game.isBlackjack(1):
             hide_dealer = 0
             end_hand(screen, game, scale_x, scale_y)
+            split_hands = False
         else:
             hide_dealer = 1
 
@@ -346,6 +367,7 @@ def playGame(window_size, decks, bots, balance):
                     split_hands = True
                 elif bet_button.collidepoint(x, y):
                     game.deal_cards()
+                    split_hands = False
                     player.balance = player.balance - player.current_bet
                 for i, zones in enumerate(CHIP_BUTTON_ZONES):
                     # Check for + button click
@@ -364,8 +386,9 @@ def playGame(window_size, decks, bots, balance):
         # Display each player's current hand value
         for idx, player in enumerate(game.players[1:]): # When dealer is hiding, skip over them and don't show their value
 
-            if len(player.hand) >= 2:
+            if len(player.hand) >= 1:
                 value = player.getHandValue()
+
                 # Create font and grab its size
                 value_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 16)
 
@@ -378,25 +401,28 @@ def playGame(window_size, decks, bots, balance):
 
                 text_width, text_height = value_text.get_size()
 
-            if not split_hands:
-                position = PLAYER_ZONES[f'player1']
-            elif split_hands and idx == 0:
-                position = PLAYER_ZONES[f'player1split1']
-            elif split_hands and idx == 1:
-                position = PLAYER_ZONES[f'player1']
-                
-            value_position = (
-            position[0] * scale_x,  # Adjust position to align with the player's cards
-            (position[2] - 30) * scale_y  # Slightly above the cards
-            )
+                if not split_hands:
+                    position = PLAYER_ZONES[f'player1']
+                elif split_hands and idx == 0:
+                    position = PLAYER_ZONES[f'player1split1']
+                elif split_hands and idx == 1:
+                    position = PLAYER_ZONES[f'player1']
+                    
+                value_position = (
+                position[0] * scale_x,  # Adjust position to align with the player's cards
+                (position[2] - 30) * scale_y  # Slightly above the cards
+                )
             
 
-            # Clear the previous value by drawing a rectangle over it
-            pygame.draw.rect(
-            screen,
-            TABLE_COLOR,  # Use the table's background color
-            pygame.Rect(value_position[0], value_position[1], text_width + 30, text_height)
-            )
+                # Clear the previous value by drawing a rectangle over it
+                pygame.draw.rect(
+                screen,
+                TABLE_COLOR,  # Use the table's background color
+                pygame.Rect(value_position[0], value_position[1], text_width + 30, text_height)
+                )
+
+                # Display the value
+                screen.blit(value_text, value_position)
 
 
 
@@ -477,7 +503,7 @@ def playGame(window_size, decks, bots, balance):
         screen.blit(stand_text, stand_text_rect)
         
         # Draw split button
-        if (player.isNotBot and len(player.hand) == 2 and player.hand[0]['value'] == player.hand[1]['value']):
+        if (len(player.hand) == 2 and player.hand[0]['value'] == player.hand[1]['value']):
             pygame.draw.rect(screen, (255, 0, 0), split_button)
             split_font = pygame.font.Font('black_jack/BLACKJAR.TTF', 32)
             split_text = split_font.render("Split", True, (255, 255, 255))

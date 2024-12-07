@@ -29,13 +29,12 @@ card_value = {
 }
 
 class Player:
-    def __init__(self, budget, canMakeDecision):
+    def __init__(self, budget):
         self.original_balance = budget  # Store the original balance
         self.balance = budget
         self.current_bet = 0
         self.hand = []
         self.winnings = 0
-        self.isNotBot = canMakeDecision
 
     def placeBet(self, bet_amount):
         self.current_bet = bet_amount
@@ -83,7 +82,7 @@ class BlackJack:
         self.deck_id = None
         self.num_chips = 0
         self.wager = None
-        self.players: list[Player] = [Player(-1, False)]
+        self.players: list[Player] = [Player(-1)]
         self.num_bots = 0
         self.card_count = None
         self.max_deck = None
@@ -204,7 +203,6 @@ class BlackJack:
 
     def playmates(self, numbots):
         self.num_bots = numbots
-        #self.players.append(Player(-1)) #append dealer as special player with balance -1
         for _ in range(numbots): # append bots with budget 100
             self.players.append(Player(100))
 
@@ -241,15 +239,12 @@ class BlackJack:
         self.printHands(True)
         
     def split(self, idx):
-        if len(self.players) > 2:
-            self.players[3] = self.players[2]
-        if len(self.players) > 3:
-            self.players[4] = self.players[3]
-        new_hand = Player(self.players[idx].balance, True)
+        new_hand = Player(self.players[idx].balance)
+        self.players[idx].balance -= self.players[idx].current_bet
         split_card = self.players[idx].hand.pop(1)
         new_hand.addCard(split_card)
-        #self.hit(idx)
-        self.players.insert(idx+2, new_hand)
+        self.players.insert(idx, new_hand)
+
     
     def deckSize(self): #use this to keep track of how many cards are left in the deck
         if self.card_count <= (0.25 * self.max_deck):
@@ -262,7 +257,7 @@ class BlackJack:
             elif idx == 0:
                 player_name = "Dealer"
             else:
-                player_name = f"Bot {idx - 1}"
+                player_name = f"Player {idx - 1}"
             
             if idx == 1 and hide_dealers:
                 card_names = [f"{player.hand[1]['value']} of {player.hand[1]['suit']} and UNKNOWN"]
@@ -364,6 +359,7 @@ class BlackJack:
         
     def getMaxScoreFromHand(self, idx):
         values = self.players[idx].getHandValue()
+        print(values)
         if values == None:
             return None
         if len(values) == 1:
@@ -408,14 +404,37 @@ class BlackJack:
 
             return has_ace and has_ten
         
-    def end_round(self):
+    def end_round(self, isSplit):
         # Determine the outcome
+        print(f'num players: {len(self.players)}')
+        print(f'players: {self.players}')
         player_value = self.getMaxScoreFromHand(1)
         dealer_value = self.getMaxScoreFromHand(0)
 
+        if isSplit:
+            split_value = self.getMaxScoreFromHand(2)
+            if split_value == None:
+                self.end_game("Loss")
+                return "Loss"
+            elif dealer_value is None or dealer_value > 21:
+                self.players[1].balance += self.players[2].current_bet * 2
+                self.end_game("Win")
+                return "Win"
+            elif split_value > dealer_value:
+                self.players[1].balance += self.players[2].current_bet * 2
+                self.end_game("Win")
+                return "Win"
+            elif split_value == dealer_value:
+                self.players[1].balance += self.players[2].current_bet
+                self.end_game("Push")
+                return "Push"
+            else:
+                self.end_game("Loss")
+                return "Loss"
+
         print(f'dealer_value: {dealer_value}')
         print(f'player_value: {player_value}')
-
+        
         if (player_value == None):
             print(f'Player has lost the hand. Current balance is {self.players[1].balance}')
             self.end_game("Loss")
